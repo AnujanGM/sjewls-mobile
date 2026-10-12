@@ -13,7 +13,8 @@ class AppTheme {
         surface: AppColors.background,
         onPrimary: AppColors.white,
         onSecondary: AppColors.dark,
-        onSurface: AppColors.dark,
+        onSurface: AppColors.white,
+        onSurfaceVariant: AppColors.white,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.primary,
@@ -23,21 +24,19 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.gold,
           foregroundColor: AppColors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       textTheme: const TextTheme(
         headlineMedium: TextStyle(
-          color: AppColors.dark,
+          color: AppColors.white,
           fontWeight: FontWeight.bold,
         ),
-        bodyLarge: TextStyle(color: AppColors.dark),
-        bodyMedium: TextStyle(color: AppColors.dark),
+        bodyLarge: TextStyle(color: AppColors.white),
+        bodyMedium: TextStyle(color: AppColors.white),
       ),
     );
   }
