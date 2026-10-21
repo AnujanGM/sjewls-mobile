@@ -158,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
                 const SizedBox(height: 20),
-        
+
                 // Continue button
                 SizedBox(
                   width: double.infinity,
@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? null
                         : () async {
                             final value = _controller.text.trim();
-        
+
                             // Basic validation
                             if (value.isEmpty) {
                               setState(() {
@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               });
                               return;
                             }
-        
+
                             if (!isPhone) {
                               final emailRegex = RegExp(
                                 r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
@@ -187,18 +187,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return;
                               }
                             }
-        
+
                             // Start loading
                             setState(() {
                               _isLoading = true;
                               _errorMessage = null;
                             });
-        
+
                             try {
                               // Create repository and call the API
                               final repo = AuthRepository(ApiClient());
-                              final result = await repo.requestOtp(value);
-        
+                              await repo.requestOtp(value);
+
                               // Success → go to OTP screen
                               if (mounted) {
                                 // ignore: use_build_context_synchronously

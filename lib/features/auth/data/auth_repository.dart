@@ -1,11 +1,13 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/token_storage.dart';
 
 class AuthRepository {
   final ApiClient _apiClient;
+  final TokenStorage _tokenStorage;
 
-  AuthRepository(this._apiClient);
+  AuthRepository(this._apiClient, {TokenStorage? tokenStorage})
+    : _tokenStorage = tokenStorage ?? const TokenStorage();
 
   // 1. Request OTP
   Future<Map<String, dynamic>> requestOtp(String contact) async {
@@ -16,22 +18,12 @@ class AuthRepository {
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
-      debugPrint('OTP request failed: ${e.type}');
-      debugPrint('HTTP status: ${e.response?.statusCode}');
-      debugPrint('Response body: ${e.response?.data}');
-
-      final data = e.response?.data;
-
-      if (data is Map && data['message'] != null) {
-        throw Exception(data['message']);
-      }
-
-      if (e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.connectionTimeout) {
-        throw Exception('Server is taking too long. Please try again.');
-      }
-
-      throw Exception('Failed to send OTP. Please try again.');
+      throw Exception(
+        ApiClient.extractErrorMessage(
+          e,
+          fallback: 'Failed to send OTP. Please try again.',
+        ),
+      );
     }
   }
 
@@ -45,28 +37,83 @@ class AuthRepository {
         '/api/v1/auth/otp/verify',
         data: {'contact': contact, 'code': code},
       );
-      return response.data;
+      final data = Map<String, dynamic>.from(response.data as Map);
+      await _persistTokensIfPresent(data);
+      return data;
     } on DioException catch (e) {
-      final data = e.response?.data;
+      throw Exception(
+        ApiClient.extractErrorMessage(
+          e,
+          fallback: 'Invalid OTP. Please try again.',
+        ),
+      );
+    }
+  }
 
-      // 1. Try simple "message" field
-      if (data is Map && data['message'] != null) {
-        throw Exception(data['message']);
+  // 3. Complete Registration
+  Future<Map<String, dynamic>> completeRegistration({
+    required String registrationToken,
+    required String fullName,
+    required String dateOfBirth,
+    String? nic,
+    String? email,
+    String? phoneNumber,
+    String? additionalContact,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/api/v1/auth/registration/complete',
+        data: {
+          'registrationToken': registrationToken,
+          'fullName': fullName,
+          'dateOfBirth': dateOfBirth,
+          'nic': nic,
+          'email': email,
+          'phoneNumber': phoneNumber,
+          'additionalContact': additionalContact,
+        },
+      );
+      final data = Map<String, dynamic>.from(response.data as Map);
+      await _persistTokensIfPresent(data);
+      return data;
+    } on DioException catch (e) {
+      throw Exception(
+        ApiClient.extractErrorMessage(
+          e,
+          fallback: 'Failed to complete registration.',
+        ),
+      );
+    }
+  }
+
+  // 4. Logout
+  Future<void> logout() async {
+    final refreshToken = await _tokenStorage.getRefreshToken();
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      try {
+        await _apiClient.dio.post(
+          '/api/v1/auth/logout',
+          data: {'refreshToken': refreshToken},
+        );
+      } catch (_) {
+        // Proceed with local token cleanup even if network call fails
       }
+    }
+    await _tokenStorage.clearSession();
+  }
 
-      // 2. Try Problem Details "detail" field
-      if (data is Map && data['detail'] != null) {
-        throw Exception(data['detail']);
-      }
-
-      // 3. Timeout
-      if (e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.connectionTimeout) {
-        throw Exception('Server is taking too long. Please try again.');
-      }
-
-      // 4. Fallback
-      throw Exception('Invalid OTP. Please try again.');
+  Future<void> _persistTokensIfPresent(Map<String, dynamic> data) async {
+    final accessToken = data['accessToken'];
+    if (accessToken is String && accessToken.isNotEmpty) {
+      final refreshToken = (data['refreshToken'] as String?) ?? '';
+      final customer = data['customer'] is Map
+          ? Map<String, dynamic>.from(data['customer'] as Map)
+          : null;
+      await _tokenStorage.saveSession(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        customer: customer,
+      );
     }
   }
 }

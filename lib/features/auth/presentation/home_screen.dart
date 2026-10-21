@@ -1,19 +1,5 @@
-import 'package:flutter/material.dart';
+import '../../home/presentation/home_dashboard_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends HomeDashboardScreen {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Text('Home Screen'),
-      ),
-    );
-  }
 }

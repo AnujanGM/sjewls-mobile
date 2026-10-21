@@ -97,7 +97,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 'OTP sent to ${widget.contact}',
                 style: TextStyle(
                   fontSize: 15,
-                  color: AppColors.dark.withOpacity(0.7),
+                  color: AppColors.dark.withValues(alpha: 0.7),
                 ),
               ),
 
@@ -108,7 +108,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 child: Icon(
                   Icons.mark_email_read_outlined,
                   size: 64,
-                  color: AppColors.primary.withOpacity(0.7),
+                  color: AppColors.primary.withValues(alpha: 0.7),
                 ),
               ),
 
@@ -140,7 +140,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(28), // oval look
                           borderSide: BorderSide(
-                            color: AppColors.dark.withOpacity(0.3),
+                            color: AppColors.dark.withValues(alpha: 0.3),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -199,24 +199,21 @@ class _OtpScreenState extends State<OtpScreen> {
 
                             if (mounted) {
                               if (nextAction == 'Dashboard') {
-                                // Existing user → go to Home (we will create Home later)
-                                // For now just show success
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Login successful!'),
-                                  ),
-                                );
-                                // context.go('/home');
+                                // ignore: use_build_context_synchronously
+                                context.go('/home');
                               } else if (nextAction == 'CompleteProfile') {
-                                // New user → go to Complete Profile screen
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Please complete your profile',
-                                    ),
-                                  ),
+                                // ignore: use_build_context_synchronously
+                                context.go(
+                                  '/complete-profile',
+                                  extra: {
+                                    'registrationToken':
+                                        result['registrationToken'],
+                                    'verifiedContact':
+                                        result['verifiedContact'] ??
+                                        widget.contact,
+                                    'isPhone': widget.isPhone,
+                                  },
                                 );
-                                // context.go('/complete-profile');
                               } else {
                                 // Unexpected response
                                 setState(() {
