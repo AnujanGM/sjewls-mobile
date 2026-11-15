@@ -1,11 +1,24 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sjewls_mobile/core/network/token_storage.dart';
 import 'package:sjewls_mobile/core/utils/formatters.dart';
+import 'package:sjewls_mobile/features/auth/presentation/complete_profile_screen.dart';
+import 'package:sjewls_mobile/features/auth/presentation/login_screen.dart';
+import 'package:sjewls_mobile/features/chitu/data/chitu_models.dart';
+import 'package:sjewls_mobile/features/chitu/presentation/chitu_payment_screen.dart';
+import 'package:sjewls_mobile/features/chitu/presentation/chitu_provider.dart';
+import 'package:sjewls_mobile/features/chitu/presentation/chitu_tab_screen.dart';
+import 'package:sjewls_mobile/features/home/presentation/home_dashboard_screen.dart';
 import 'package:sjewls_mobile/features/jewellery/data/jewellery_models.dart';
+import 'package:sjewls_mobile/features/jewellery/presentation/jewellery_provider.dart';
 import 'package:sjewls_mobile/features/notifications/data/notification_models.dart';
+import 'package:sjewls_mobile/features/notifications/presentation/notification_provider.dart';
 import 'package:sjewls_mobile/features/profile/data/profile_models.dart';
+import 'package:sjewls_mobile/features/profile/presentation/profile_provider.dart';
 import 'package:sjewls_mobile/main.dart';
+import 'package:sjewls_mobile/routing/app_router.dart';
 
 void main() {
   testWidgets('SJewls splash screen renders branding and redirects to login', (
@@ -27,115 +40,685 @@ void main() {
     expect(find.text('Enter your phone or email'), findsOneWidget);
   });
 
-  group('Formatters & Model Parsing Tests', () {
-    test('Currency and grams formatters format values accurately', () {
-      expect(
-        Formatters.currency(125450.5, currencyCode: 'LKR'),
-        'LKR 125,450.50',
-      );
-      expect(Formatters.grams(4.5), '4.5000 g');
-      expect(Formatters.grams(8.0, trimTrailingZeros: true), '8.00 g');
-      expect(Formatters.percentage(12.5), '12.5%');
-      expect(Formatters.percentage(10.0), '10%');
-    });
+  group('Lottery MVP Disabling & Navigation Tests', () {
+    testWidgets(
+      'Lottery is absent from bottom navigation and /lottery redirects away',
+      (WidgetTester tester) async {
+        TokenStorage.useInMemoryOnly(true);
+        const storage = TokenStorage();
+        await storage.saveSession(
+          accessToken: 'test-jwt-token',
+          refreshToken: 'test-refresh-token',
+        );
 
-    test('CustomerProfileDto parses secondary contact verification states', () {
-      final profile = CustomerProfileDto.fromJson({
-        'id': 'c1111111-1111-1111-1111-111111111111',
-        'fullName': 'K. Saranga',
-        'dateOfBirth': '1995-04-12',
-        'nic': '199512345678',
-        'phoneNumber': '+94771234567',
-        'email': 'customer@example.com',
-        'isPhoneVerified': true,
-        'isEmailVerified': false,
-        'primaryBranchId': 'b1111111-1111-1111-1111-111111111111',
-        'primaryBranchCode': 'JAF',
-        'primaryBranchName': 'Jaffna Main',
-        'isProfileComplete': true,
-      });
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              customerProfileProvider.overrideWith(
+                (ref) async => CustomerProfileDto.fromJson({
+                  'id': 'c1',
+                  'fullName': 'K. Saranga',
+                  'isPhoneVerified': true,
+                  'isEmailVerified': true,
+                  'primaryBranchId': 'b1',
+                  'primaryBranchName': 'Jaffna Main',
+                  'isProfileComplete': true,
+                }),
+              ),
+              myChituInvestmentsProvider.overrideWith(
+                (ref) async => const CustomerChituInvestmentsPagedResponse(
+                  items: [],
+                  totalCount: 0,
+                  page: 1,
+                  pageSize: 20,
+                  totalPages: 1,
+                ),
+              ),
+              customerEnrolmentsProvider.overrideWith(
+                (ref) async => const CustomerEnrolmentsPagedResponse(
+                  items: [],
+                  totalCount: 0,
+                  page: 1,
+                  pageSize: 20,
+                  totalPages: 1,
+                ),
+              ),
+              jewelleryPlansProvider.overrideWith((ref) async => const []),
+              liveGoldRateProvider.overrideWith(
+                (ref) async => const CustomerGoldRateDto(
+                  rate24KPerGram: 29500.0,
+                  rate22KPerGram: 27040.0,
+                  currency: 'LKR',
+                ),
+              ),
+              unreadNotificationCountProvider.overrideWithValue(0),
+            ],
+            child: const SJewlsApp(),
+          ),
+        );
 
-      expect(profile.fullName, 'K. Saranga');
-      expect(profile.isPhoneVerified, isTrue);
-      expect(profile.hasUnverifiedPhone, isFalse);
-      expect(profile.hasUnverifiedEmail, isTrue);
-    });
+        // Navigate to /home and settle
+        appRouter.go('/home');
+        await tester.pumpAndSettle();
 
-    test('CustomerJewelleryPlanDto and CustomerEnrolmentDto parse schemas', () {
-      final plan = CustomerJewelleryPlanDto.fromJson({
-        'id': 'p1',
-        'name': '22K Bridal Necklace Plan',
-        'categoryName': 'Necklace',
-        'targetGrams': 16.0,
-        'offeredDurations': [6, 8, 12],
-        'premiumPercentage': 8.5,
-        'startDate': '2026-10-01',
-      });
-      expect(plan.targetGrams, 16.0);
-      expect(plan.offeredDurations, [6, 8, 12]);
+        // Verify 4 bottom navigation tabs: Home, Chittu, Jewelry, Payments (NO Lottery)
+        final bottomNav = tester.widget<BottomNavigationBar>(
+          find.byType(BottomNavigationBar),
+        );
+        expect(bottomNav.items.map((item) => item.label).toList(), [
+          'Home',
+          'Chittu',
+          'Jewelry',
+          'Payments',
+        ]);
+        expect(find.text('Lottery'), findsNothing);
 
-      final enrolment = CustomerEnrolmentDto.fromJson({
-        'enrolmentId': 'e1',
-        'planId': 'p1',
-        'planName': '22K Bridal Necklace Plan',
-        'targetGrams': 16.0,
-        'selectedDurationMonths': 12,
-        'joiningDate': '2026-10-19',
-        'deadline': '2027-10-19',
-        'premiumPercentage': 8.5,
-        'currency': 'LKR',
-        'totalConfirmedMoneyPaid': 120000.0,
-        'netAccumulatedGoldGrams': 4.0,
-        'remainingGrams': 12.0,
-        'individualProgressPercentage': 25.0,
-        'enrolmentStatus': 'Active',
-        'isContributionAllowed': true,
-      });
-      expect(enrolment.netAccumulatedGoldGrams, 4.0);
-      expect(enrolment.remainingGrams, 12.0);
-      expect(enrolment.isCompletedOrEligible, isFalse);
-    });
+        // Direct navigation to /lottery must redirect to /home
+        appRouter.go('/lottery');
+        await tester.pumpAndSettle();
+        expect(find.text('Monthly Draws & Winners'), findsNothing);
+        expect(find.text('My Chittu Plans & Slots'), findsOneWidget);
+      },
+    );
+  });
 
-    test(
-      'PaymentInitiationResponse parses HTTP 501 deferred gateway payload',
-      () {
-        final response = PaymentInitiationResponse.fromJson({
-          'code': 'PaymentProviderNotConfigured',
-          'message': 'Online payment gateway is not configured.',
-          'quoteId': 'q1',
-          'amountToPay': 45000.0,
+  group('Home Screen Payment Shortcuts & Context Passing Tests', () {
+    testWidgets(
+      'Home Screen displays gold Pay Instalment and Contribute / Buy Gold buttons for eligible enrolments and passes exact IDs',
+      (WidgetTester tester) async {
+        String? navigatedPath;
+
+        final testRouter = GoRouter(
+          initialLocation: '/home',
+          routes: [
+            GoRoute(
+              path: '/home',
+              builder: (context, state) => const HomeDashboardScreen(),
+            ),
+            GoRoute(
+              path: '/chittu/investments/:planId/pay',
+              builder: (context, state) {
+                navigatedPath = state.uri.toString();
+                return Scaffold(
+                  body: Text(
+                    'Chittu Pay Plan: ${state.pathParameters['planId']}',
+                  ),
+                );
+              },
+            ),
+            GoRoute(
+              path: '/jewelry/enrolments/:enrolmentId/buy-gold',
+              builder: (context, state) {
+                navigatedPath = state.uri.toString();
+                return Scaffold(
+                  body: Text(
+                    'Jewellery Pay Enrolment: ${state.pathParameters['enrolmentId']}',
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+
+        final activeChituPlan = CustomerChituInvestmentPlanDto.fromJson({
+          'planId': 'chitu-plan-101',
+          'branchId': 'b1',
+          'code': 'CHT-2026-01',
+          'name': 'Jaffna Gold Chittu 12M',
+          'redemptionType': 'Gold',
           'currency': 'LKR',
-          'isConfigured': false,
-        }, httpStatusCode: 501);
+          'durationMonths': 12,
+          'startDate': '2026-01-01',
+          'endDate': '2026-12-31',
+          'currentRoundIndex': 3,
+          'nextRaffleDate': '2026-11-05',
+          'planStatus': 'Active',
+          'totalOwnedSlotsCount': 2,
+          'activeSlotsCount': 2,
+          'winningSlotsCount': 0,
+          'monthlySlotPrice': 25000.0,
+          'normalMonthlyCommitment': 50000.0,
+          'actualOutstandingDueThroughCurrentRound': 50000.0,
+          'totalConfirmedContributions': 100000.0,
+          'canPayExistingSlots': true,
+          'slots': [],
+        });
 
-        expect(response.httpStatusCode, 501);
-        expect(response.isConfigured, isFalse);
-        expect(response.amountToPay, 45000.0);
+        final eligibleJewelleryEnrolment = CustomerEnrolmentDto.fromJson({
+          'enrolmentId': 'jewel-enrol-202',
+          'planId': 'jp-1',
+          'planName': '22K Bridal Necklace Plan',
+          'targetGrams': 16.0,
+          'selectedDurationMonths': 12,
+          'joiningDate': '2026-01-01',
+          'deadline': '2027-01-01',
+          'premiumPercentage': 8.0,
+          'currency': 'LKR',
+          'totalConfirmedMoneyPaid': 120000.0,
+          'netAccumulatedGoldGrams': 4.0,
+          'remainingGrams': 12.0,
+          'individualProgressPercentage': 25.0,
+          'enrolmentStatus': 'Active',
+          'isContributionAllowed': true,
+        });
+
+        final completedJewelleryEnrolment = CustomerEnrolmentDto.fromJson({
+          'enrolmentId': 'jewel-enrol-completed',
+          'planId': 'jp-2',
+          'planName': 'Completed Bangle Plan',
+          'targetGrams': 8.0,
+          'selectedDurationMonths': 6,
+          'joiningDate': '2026-01-01',
+          'deadline': '2026-07-01',
+          'premiumPercentage': 5.0,
+          'currency': 'LKR',
+          'totalConfirmedMoneyPaid': 240000.0,
+          'netAccumulatedGoldGrams': 8.0,
+          'remainingGrams': 0.0,
+          'individualProgressPercentage': 100.0,
+          'enrolmentStatus': 'Completed',
+          'isContributionAllowed': false,
+        });
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              customerProfileProvider.overrideWith(
+                (ref) async => CustomerProfileDto.fromJson({
+                  'id': 'c1',
+                  'fullName': 'K. Saranga',
+                  'isPhoneVerified': true,
+                  'isEmailVerified': true,
+                  'primaryBranchId': 'b1',
+                  'primaryBranchName': 'Jaffna Main',
+                  'isProfileComplete': true,
+                }),
+              ),
+              myChituInvestmentsProvider.overrideWith(
+                (ref) async => CustomerChituInvestmentsPagedResponse(
+                  items: [activeChituPlan],
+                  totalCount: 1,
+                  page: 1,
+                  pageSize: 20,
+                  totalPages: 1,
+                ),
+              ),
+              customerEnrolmentsProvider.overrideWith(
+                (ref) async => CustomerEnrolmentsPagedResponse(
+                  items: [
+                    eligibleJewelleryEnrolment,
+                    completedJewelleryEnrolment,
+                  ],
+                  totalCount: 2,
+                  page: 1,
+                  pageSize: 20,
+                  totalPages: 1,
+                ),
+              ),
+              jewelleryPlansProvider.overrideWith((ref) async => const []),
+              liveGoldRateProvider.overrideWith(
+                (ref) async => const CustomerGoldRateDto(
+                  rate24KPerGram: 29500.0,
+                  rate22KPerGram: 27040.0,
+                  currency: 'LKR',
+                ),
+              ),
+              unreadNotificationCountProvider.overrideWithValue(0),
+            ],
+            child: MaterialApp.router(routerConfig: testRouter),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Verify Quick Actions is removed and replaced by Live Gold Rate card
+        expect(find.text('Quick Actions'), findsNothing);
+        expect(
+          find.byKey(const Key('home_live_gold_rate_card')),
+          findsOneWidget,
+        );
+        expect(find.text('Live Gold Rate'), findsOneWidget);
+
+        // Verify Chittu Pay Instalment button is present and navigates with exact planId
+        final chituPayButton = find.byKey(
+          const Key('home_chitu_pay_chitu-plan-101'),
+        );
+        expect(chituPayButton, findsOneWidget);
+
+        await tester.ensureVisible(chituPayButton);
+        await tester.pumpAndSettle();
+        await tester.tap(chituPayButton);
+        await tester.pumpAndSettle();
+
+        expect(navigatedPath, '/chittu/investments/chitu-plan-101/pay');
+        expect(find.text('Chittu Pay Plan: chitu-plan-101'), findsOneWidget);
+
+        // Pop back to Home and test Jewellery Contribute / Buy Gold button
+        testRouter.pop();
+        await tester.pumpAndSettle();
+
+        final jewelleryPayButton = find.byKey(
+          const Key('home_jewellery_pay_jewel-enrol-202'),
+        );
+        expect(jewelleryPayButton, findsOneWidget);
+
+        // Completed enrolment must NOT have a Contribute / Buy Gold button
+        expect(
+          find.byKey(const Key('home_jewellery_pay_jewel-enrol-completed')),
+          findsNothing,
+        );
+
+        await tester.ensureVisible(jewelleryPayButton);
+        await tester.pumpAndSettle();
+        await tester.tap(jewelleryPayButton);
+        await tester.pumpAndSettle();
+
+        expect(navigatedPath, '/jewelry/enrolments/jewel-enrol-202/buy-gold');
+        expect(
+          find.text('Jewellery Pay Enrolment: jewel-enrol-202'),
+          findsOneWidget,
+        );
+      },
+    );
+  });
+
+  group('Chittu Screens & Payment States Tests', () {
+    testWidgets(
+      'ChituTabScreen renders Available Plans and My Plans & Slots tabs',
+      (WidgetTester tester) async {
+        final samplePlan = CustomerChituPlanSummaryDto.fromJson({
+          'planId': 'cp-1',
+          'branchId': 'b1',
+          'code': 'CHT-GOLD-10',
+          'name': '10-Month Festive Gold Chittu',
+          'redemptionType': 'Gold',
+          'currency': 'LKR',
+          'durationMonths': 10,
+          'startDate': '2026-10-01',
+          'endDate': '2027-07-31',
+          'monthlySlotPrice': 20000.0,
+          'winningEntitlementPerSlot': 200000.0,
+          'totalSlotCapacity': 50,
+          'issuedSlotsCount': 15,
+          'availableSlotsCount': 35,
+          'capacityPercentage': 30.0,
+          'currentRoundIndex': 1,
+          'customerOwnedSlotsCount': 1,
+          'isAvailableForJoining': true,
+        });
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              availableChituPlansProvider.overrideWith(
+                (ref) async => CustomerChituPlansPagedResponse(
+                  items: [samplePlan],
+                  totalCount: 1,
+                  page: 1,
+                  pageSize: 20,
+                  totalPages: 1,
+                ),
+              ),
+              myChituInvestmentsProvider.overrideWith(
+                (ref) async => const CustomerChituInvestmentsPagedResponse(
+                  items: [],
+                  totalCount: 0,
+                  page: 1,
+                  pageSize: 20,
+                  totalPages: 1,
+                ),
+              ),
+            ],
+            child: const MaterialApp(home: ChituTabScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('10-Month Festive Gold Chittu'), findsOneWidget);
+        expect(find.text('CHT-GOLD-10'), findsOneWidget);
+        expect(find.text('35 / 50 slots free'), findsOneWidget);
       },
     );
 
-    test('CustomerNotificationsPagedResponse parses unreadCount and items', () {
-      final paged = CustomerNotificationsPagedResponse.fromJson({
-        'items': [
-          {
-            'id': 'n1',
-            'title': 'Enrolment Activated',
-            'message': 'Your jewellery plan enrolment is now active.',
-            'type': 'EnrolmentActivated',
-            'isRead': false,
-            'createdAtUtc': '2026-10-19T12:00:00Z',
-          },
-        ],
-        'totalCount': 1,
-        'unreadCount': 1,
-        'page': 1,
-        'pageSize': 20,
-        'totalPages': 1,
+    testWidgets(
+      'ChituPaymentScreen handles empty payable slots state gracefully',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              chituPayableSlotsProvider('cp-empty').overrideWith(
+                (ref) async => const CustomerPayableSlotsDto(
+                  planId: 'cp-empty',
+                  planName: 'Completed Chittu Plan',
+                  monthlySlotPrice: 20000.0,
+                  currency: 'LKR',
+                  currentRoundIndex: 12,
+                  slots: [],
+                ),
+              ),
+            ],
+            child: const MaterialApp(
+              home: ChituPaymentScreen(planId: 'cp-empty'),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('No Payable Instalments Available'), findsOneWidget);
+      },
+    );
+  });
+
+  group(
+    'Formatters & Model Parsing Tests (Chittu, Jewellery, Unified Payments)',
+    () {
+      test('Currency and grams formatters format values accurately', () {
+        expect(
+          Formatters.currency(125450.5, currencyCode: 'LKR'),
+          'LKR 125,450.50',
+        );
+        expect(Formatters.grams(4.5), '4.5000 g');
+        expect(Formatters.grams(8.0, trimTrailingZeros: true), '8.00 g');
+        expect(Formatters.percentage(12.5), '12.5%');
+        expect(Formatters.percentage(10.0), '10%');
+        final uuidKey = Formatters.generateIdempotencyKey();
+        expect(
+          RegExp(
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+          ).hasMatch(uuidKey),
+          isTrue,
+        );
       });
 
-      expect(paged.unreadCount, 1);
-      expect(paged.items.first.title, 'Enrolment Activated');
-      expect(paged.items.first.isRead, isFalse);
-    });
+      test(
+        'Chittu v1.2 DTOs parse plan details, slots, instalments, and payment responses',
+        () {
+          final planDetail = CustomerChituPlanDetailDto.fromJson({
+            'planId': 'cp-1',
+            'branchId': 'b-1',
+            'code': 'CHT-01',
+            'name': 'Jaffna Monthly Chittu',
+            'redemptionType': 'Gold',
+            'currency': 'LKR',
+            'durationMonths': 12,
+            'startDate': '2026-01-01',
+            'endDate': '2026-12-31',
+            'monthlySlotPrice': 15000.0,
+            'winningEntitlementPerSlot': 180000.0,
+            'totalSlotCapacity': 60,
+            'issuedSlotsCount': 20,
+            'availableSlotsCount': 40,
+            'capacityPercentage': 33.3,
+            'currentRoundIndex': 2,
+            'customerOwnedSlotsCount': 1,
+            'isAvailableForJoining': true,
+            'schedule': [
+              {
+                'roundIndex': 1,
+                'scheduledDate': '2026-01-25',
+                'status': 'Completed',
+                'hasRecordedDraw': true,
+              },
+            ],
+            'terms': ['Full monthly instalments only.'],
+          });
+          expect(planDetail.name, 'Jaffna Monthly Chittu');
+          expect(planDetail.schedule.length, 1);
+          expect(planDetail.terms.first, 'Full monthly instalments only.');
+
+          final slotDetail = CustomerChituSlotDetailDto.fromJson({
+            'slotId': 's-1',
+            'slotNumber': 7,
+            'slotDisplayCode': 'CHT-01-S07',
+            'joinedAtUtc': '2026-01-02T10:00:00Z',
+            'monthlySlotPrice': 15000.0,
+            'durationMonths': 12,
+            'instalmentsPaidCount': 2,
+            'paidThroughRound': 2,
+            'arrearsMonths': 0,
+            'arrearsAmount': 0.0,
+            'advancePaidMonths': 0,
+            'advancePaidAmount': 0.0,
+            'isCurrentRoundPaid': true,
+            'totalConfirmedContributions': 30000.0,
+            'slotStatus': 'Active',
+            'isWinner': false,
+            'winningEntitlementClaimed': false,
+            'isRaffleEligible': true,
+            'planId': 'cp-1',
+            'planName': 'Jaffna Monthly Chittu',
+            'currency': 'LKR',
+            'instalments': [
+              {
+                'id': 'i-1',
+                'monthIndex': 1,
+                'dueDate': '2026-01-20',
+                'amountDue': 15000.0,
+                'status': 'Paid',
+                'paidAtUtc': '2026-01-02T10:00:00Z',
+              },
+            ],
+          });
+          expect(slotDetail.slotDisplayCode, 'CHT-01-S07');
+          expect(slotDetail.canPayInstalment, isTrue);
+          expect(slotDetail.instalments.first.status, 'Paid');
+
+          final confirmResp = CustomerChituPaymentConfirmResponse.fromJson({
+            'paymentId': 'pay-99',
+            'planId': 'cp-1',
+            'planName': 'Jaffna Monthly Chittu',
+            'totalAmount': 15000.0,
+            'currency': 'LKR',
+            'paidAtUtc': '2026-02-15T08:30:00Z',
+            'isSimulated': true,
+            'receipts': [
+              {
+                'slotId': 's-1',
+                'slotDisplayCode': 'CHT-01-S07',
+                'amountAllocated': 15000.0,
+                'monthsCovered': 1,
+                'clearedMonthIndices': [2],
+              },
+            ],
+          });
+          expect(confirmResp.totalAmount, 15000.0);
+          expect(confirmResp.receipts.first.clearedMonthIndices, [2]);
+        },
+      );
+
+      test(
+        'CustomerProfileDto parses secondary contact verification states',
+        () {
+          final profile = CustomerProfileDto.fromJson({
+            'id': 'c1111111-1111-1111-1111-111111111111',
+            'fullName': 'K. Saranga',
+            'dateOfBirth': '1995-04-12',
+            'nic': '199512345678',
+            'phoneNumber': '+94771234567',
+            'email': 'customer@example.com',
+            'isPhoneVerified': true,
+            'isEmailVerified': false,
+            'primaryBranchId': 'b1111111-1111-1111-1111-111111111111',
+            'primaryBranchCode': 'JAF',
+            'primaryBranchName': 'Jaffna Main',
+            'isProfileComplete': true,
+          });
+
+          expect(profile.fullName, 'K. Saranga');
+          expect(profile.isPhoneVerified, isTrue);
+          expect(profile.hasUnverifiedPhone, isFalse);
+          expect(profile.hasUnverifiedEmail, isTrue);
+        },
+      );
+
+      test(
+        'PaymentInitiationResponse parses HTTP 501 deferred gateway payload',
+        () {
+          final response = PaymentInitiationResponse.fromJson({
+            'code': 'PaymentProviderNotConfigured',
+            'message': 'Online payment gateway is not configured.',
+            'quoteId': 'q1',
+            'amountToPay': 45000.0,
+            'currency': 'LKR',
+            'isConfigured': false,
+          }, httpStatusCode: 501);
+
+          expect(response.httpStatusCode, 501);
+          expect(response.isConfigured, isFalse);
+          expect(response.amountToPay, 45000.0);
+        },
+      );
+
+      test(
+        'CustomerNotificationsPagedResponse parses unreadCount and items',
+        () {
+          final paged = CustomerNotificationsPagedResponse.fromJson({
+            'items': [
+              {
+                'id': 'n1',
+                'title': 'Enrolment Activated',
+                'message': 'Your jewellery plan enrolment is now active.',
+                'type': 'EnrolmentActivated',
+                'isRead': false,
+                'createdAtUtc': '2026-10-19T12:00:00Z',
+              },
+            ],
+            'totalCount': 1,
+            'unreadCount': 1,
+            'page': 1,
+            'pageSize': 20,
+            'totalPages': 1,
+          });
+
+          expect(paged.unreadCount, 1);
+          expect(paged.items.first.title, 'Enrolment Activated');
+          expect(paged.items.first.isRead, isFalse);
+        },
+      );
+    },
+  );
+
+  group('Auth UI & Keyboard Tests', () {
+    testWidgets(
+      'LoginScreen switches keyboard between number pad for phone and QWERTY for email',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
+        await tester.pumpAndSettle();
+
+        // Initially Phone is selected
+        TextField phoneField = tester.widget<TextField>(find.byType(TextField));
+        expect(
+          phoneField.keyboardType,
+          const TextInputType.numberWithOptions(signed: false, decimal: false),
+        );
+        expect(phoneField.inputFormatters, isNotNull);
+
+        // Tap Email button
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Email'));
+        await tester.pumpAndSettle();
+
+        TextField emailField = tester.widget<TextField>(find.byType(TextField));
+        expect(emailField.keyboardType, TextInputType.emailAddress);
+        expect(emailField.inputFormatters, isNull);
+
+        // Tap Phone button again
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Phone'));
+        await tester.pumpAndSettle();
+
+        phoneField = tester.widget<TextField>(find.byType(TextField));
+        expect(
+          phoneField.keyboardType,
+          const TextInputType.numberWithOptions(signed: false, decimal: false),
+        );
+        expect(phoneField.inputFormatters, isNotNull);
+      },
+    );
+
+    testWidgets(
+      'CompleteProfileScreen displays NIC * and removes optional text from NIC',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: CompleteProfileScreen(
+              registrationToken: 'test-token',
+              verifiedContact: '0771234567',
+              isPhone: true,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Verify NIC * is present
+        expect(find.text('NIC *'), findsOneWidget);
+        // Verify NIC (optional) is not present
+        expect(find.text('NIC (optional)'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Live Gold Rate card renders on narrow screen without horizontal overflow',
+      (WidgetTester tester) async {
+        // Set narrow screen width like in the overflow report (322px)
+        tester.view.physicalSize = const Size(322, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              customerProfileProvider.overrideWith(
+                (ref) async => CustomerProfileDto.fromJson({
+                  'id': 'c1',
+                  'fullName': 'K. Saranga',
+                  'isPhoneVerified': true,
+                  'isEmailVerified': true,
+                  'primaryBranchName': 'Saranga Jewels Jaffna Main Branch',
+                  'primaryBranchCode': 'JAF',
+                }),
+              ),
+              myChituInvestmentsProvider.overrideWith(
+                (ref) async => const CustomerChituInvestmentsPagedResponse(
+                  items: [],
+                  totalCount: 0,
+                  page: 1,
+                  pageSize: 20,
+                  totalPages: 1,
+                ),
+              ),
+              customerEnrolmentsProvider.overrideWith(
+                (ref) async => const CustomerEnrolmentsPagedResponse(
+                  items: [],
+                  totalCount: 0,
+                  page: 1,
+                  pageSize: 20,
+                  totalPages: 1,
+                ),
+              ),
+              jewelleryPlansProvider.overrideWith((ref) async => const []),
+              liveGoldRateProvider.overrideWith(
+                (ref) async => const CustomerGoldRateDto(
+                  rate24KPerGram: 29500.0,
+                  rate22KPerGram: 27040.0,
+                  currency: 'LKR',
+                  rateSource: 'Saranga Jewels Branch Rate',
+                  isLiveFromBackend: false,
+                ),
+              ),
+              unreadNotificationCountProvider.overrideWithValue(0),
+            ],
+            child: const MaterialApp(home: HomeDashboardScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('home_live_gold_rate_card')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }

@@ -50,20 +50,41 @@ class CustomerJewelleryPlanDto {
   });
 
   factory CustomerJewelleryPlanDto.fromJson(Map<String, dynamic> json) {
-    final rawDurations = (json['offeredDurations'] as List?) ?? const [];
+    final rawDurations =
+        (json['offeredDurations'] as List?) ??
+        (json['allowedDurationsMonths'] as List?) ??
+        (json['durations'] as List?) ??
+        (json['durationsMonths'] as List?) ??
+        const [];
     return CustomerJewelleryPlanDto(
-      id: (json['id'] ?? '').toString(),
-      name: (json['name'] as String?) ?? 'Jewellery Plan',
-      categoryId: json['categoryId'] as String?,
-      categoryName: json['categoryName'] as String?,
-      imageUrl: json['imageUrl'] as String?,
-      targetGrams: (json['targetGrams'] as num?)?.toDouble() ?? 0.0,
+      id: (json['id'] ?? json['planId'] ?? '').toString(),
+      name:
+          (json['name'] as String?) ??
+          (json['title'] as String?) ??
+          (json['planName'] as String?) ??
+          'Jewellery Plan',
+      categoryId: (json['categoryId'] ?? json['category']?['id'])?.toString(),
+      categoryName:
+          (json['categoryName'] ?? json['category']?['name']) as String?,
+      imageUrl: (json['imageUrl'] ?? json['image']) as String?,
+      targetGrams:
+          ((json['targetGrams'] ??
+                      json['targetProductGoldWeightGrams'] ??
+                      json['targetWeightGrams'] ??
+                      json['targetWeight'] ??
+                      json['goldWeight'])
+                  as num?)
+              ?.toDouble() ??
+          0.0,
       offeredDurations: rawDurations
           .whereType<num>()
           .map((e) => e.toInt())
           .toList(),
-      premiumPercentage: (json['premiumPercentage'] as num?)?.toDouble() ?? 0.0,
-      startDate: json['startDate'] as String?,
+      premiumPercentage:
+          ((json['premiumPercentage'] ?? json['premium']) as num?)
+              ?.toDouble() ??
+          0.0,
+      startDate: (json['startDate'] ?? json['createdAtUtc']) as String?,
       description: json['description'] as String?,
     );
   }
@@ -478,4 +499,25 @@ class PaymentInitiationResponse {
       httpStatusCode: httpStatusCode,
     );
   }
+}
+
+class CustomerGoldRateDto {
+  final double rate24KPerGram;
+  final double rate22KPerGram;
+  final String currency;
+  final String? rateAsOf;
+  final String? rateSource;
+  final bool isLiveFromBackend;
+
+  const CustomerGoldRateDto({
+    required this.rate24KPerGram,
+    required this.rate22KPerGram,
+    this.currency = 'LKR',
+    this.rateAsOf,
+    this.rateSource,
+    this.isLiveFromBackend = true,
+  });
+
+  double get sovereign22KRate => rate22KPerGram * 8.0;
+  double get sovereign24KRate => rate24KPerGram * 8.0;
 }

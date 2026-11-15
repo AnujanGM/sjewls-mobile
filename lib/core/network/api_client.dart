@@ -113,7 +113,7 @@ class ApiClient {
           },
           onError: (error, handler) {
             debugPrint(
-              '<-- ERROR ${error.response?.statusCode} ${error.requestOptions.path}',
+              '<-- ERROR ${error.response?.statusCode} ${error.requestOptions.path}: ${error.response?.data}',
             );
             handler.next(error);
           },

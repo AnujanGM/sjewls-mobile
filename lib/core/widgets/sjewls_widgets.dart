@@ -112,10 +112,16 @@ class SJewlsEmptyView extends StatelessWidget {
 }
 
 class SJewlsErrorView extends StatelessWidget {
+  final String? title;
   final String message;
   final VoidCallback? onRetry;
 
-  const SJewlsErrorView({super.key, required this.message, this.onRetry});
+  const SJewlsErrorView({
+    super.key,
+    this.title,
+    required this.message,
+    this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -139,10 +145,10 @@ class SJewlsErrorView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Unable to Load Data',
+            Text(
+              title ?? 'Unable to Load Data',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.dark,
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
@@ -177,12 +183,16 @@ class SJewlsStatusBadge extends StatelessWidget {
   final String label;
   final bool isHighlighted;
   final bool isWarning;
+  final Color? backgroundColor;
+  final Color? textColor;
 
   const SJewlsStatusBadge({
     super.key,
     required this.label,
     this.isHighlighted = false,
     this.isWarning = false,
+    this.backgroundColor,
+    this.textColor,
   });
 
   factory SJewlsStatusBadge.fromStatus(String? rawStatus) {
@@ -214,20 +224,24 @@ class SJewlsStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color bgColor;
     final Color borderColor;
-    final Color textColor;
+    final Color resolvedTextColor;
 
-    if (isHighlighted) {
+    if (backgroundColor != null || textColor != null) {
+      bgColor = backgroundColor ?? AppColors.primary.withValues(alpha: 0.1);
+      resolvedTextColor = textColor ?? AppColors.primary;
+      borderColor = resolvedTextColor.withValues(alpha: 0.35);
+    } else if (isHighlighted) {
       bgColor = AppColors.gold.withValues(alpha: 0.18);
       borderColor = AppColors.gold;
-      textColor = AppColors.primary;
+      resolvedTextColor = AppColors.primary;
     } else if (isWarning) {
       bgColor = AppColors.dark.withValues(alpha: 0.08);
       borderColor = AppColors.dark.withValues(alpha: 0.28);
-      textColor = AppColors.dark;
+      resolvedTextColor = AppColors.dark;
     } else {
       bgColor = AppColors.primary.withValues(alpha: 0.1);
       borderColor = AppColors.primary.withValues(alpha: 0.3);
-      textColor = AppColors.primary;
+      resolvedTextColor = AppColors.primary;
     }
 
     return Container(
@@ -240,7 +254,7 @@ class SJewlsStatusBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: textColor,
+          color: resolvedTextColor,
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),

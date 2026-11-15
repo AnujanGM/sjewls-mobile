@@ -48,8 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   'Enter your phone or email',
                   style: TextStyle(
                     fontSize: 16,
-                    // ignore: deprecated_member_use
-                    color: AppColors.white.withOpacity(0.7),
+                    color: AppColors.white.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -61,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () {
                         setState(() {
                           isPhone = true;
+                          _errorMessage = null;
                           _controller.clear();
                         });
                       },
@@ -89,6 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () {
                         setState(() {
                           isPhone = false;
+                          _errorMessage = null;
                           _controller.clear();
                         });
                       },
@@ -114,19 +115,33 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                // Phone / Email field (just UI for now)
+                // Phone / Email field
                 TextField(
+                  key: ValueKey<bool>(isPhone),
                   style: const TextStyle(color: AppColors.inputText),
                   cursorColor: AppColors.primary,
                   controller: _controller,
                   keyboardType: isPhone
-                      ? TextInputType.phone
+                      ? const TextInputType.numberWithOptions(
+                          signed: false,
+                          decimal: false,
+                        )
                       : TextInputType.emailAddress,
                   inputFormatters: isPhone
                       ? [FilteringTextInputFormatter.digitsOnly]
                       : null,
+                  autocorrect: false,
+                  enableSuggestions: !isPhone,
+                  textCapitalization: TextCapitalization.none,
+                  textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
                     labelText: isPhone ? 'Phone Number' : 'Email Address',
+                    hintText: isPhone
+                        ? 'Enter phone number'
+                        : 'Enter email address',
+                    hintStyle: TextStyle(
+                      color: AppColors.inputText.withValues(alpha: 0.5),
+                    ),
                     labelStyle: const TextStyle(color: AppColors.primary),
                     floatingLabelStyle: const TextStyle(
                       color: AppColors.gold,
@@ -171,7 +186,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             // Basic validation
                             if (value.isEmpty) {
                               setState(() {
-                                _errorMessage = 'Please enter phone or email';
+                                _errorMessage = isPhone
+                                    ? 'Please enter phone number'
+                                    : 'Please enter email address';
                               });
                               return;
                             }

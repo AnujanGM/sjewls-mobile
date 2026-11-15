@@ -1,3 +1,6 @@
 class ApiConstants {
-  static const String baseUrl = 'https://sjewls-production.up.railway.app';
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://sjewls.onrender.com',
+  );
 }

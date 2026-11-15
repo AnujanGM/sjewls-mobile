@@ -5,8 +5,11 @@ import '../core/theme/app_colors.dart';
 import '../features/auth/presentation/complete_profile_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/otp_screen.dart';
+import '../features/chitu/presentation/chitu_investment_detail_screen.dart';
+import '../features/chitu/presentation/chitu_payment_screen.dart';
+import '../features/chitu/presentation/chitu_plan_detail_screen.dart';
+import '../features/chitu/presentation/chitu_slot_detail_screen.dart';
 import '../features/chitu/presentation/chitu_tab_screen.dart';
-import '../features/chitu/presentation/lottery_tab_screen.dart';
 import '../features/home/presentation/home_dashboard_screen.dart';
 import '../features/jewellery/presentation/buy_gold_screen.dart';
 import '../features/jewellery/presentation/enrolment_detail_screen.dart';
@@ -18,12 +21,23 @@ import '../features/profile/presentation/profile_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+// TODO(mvp): Lottery is out of scope for the current MVP and temporarily disabled.
+// Set to true and restore the Lottery StatefulShellBranch/BottomNavigationBarItem when ready.
+const bool kEnableLotteryMvp = false;
+
 // Single source of truth for all navigation
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
   redirect: (context, state) {
     final path = state.uri.path;
+
+    // Prevent direct navigation to /lottery while disabled for MVP
+    if (!kEnableLotteryMvp && path.startsWith('/lottery')) {
+      final token = const TokenStorage().cachedAccessToken;
+      return (token != null && token.isNotEmpty) ? '/home' : '/login';
+    }
+
     final isPublicRoute =
         path == '/' ||
         path == '/login' ||
@@ -82,7 +96,7 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // 5-Tab Bottom Navigation Shell: Home, Chittu, Jewelry, Lottery, Payments
+    // Bottom Navigation Shell (MVP: Home, Chittu, Jewelry, Payments; Lottery disabled)
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return SJewlsMainShell(navigationShell: navigationShell);
@@ -105,6 +119,43 @@ final GoRouter appRouter = GoRouter(
               path: '/chittu',
               name: 'chittu',
               builder: (context, state) => const ChituTabScreen(),
+              routes: [
+                GoRoute(
+                  path: 'plans/:planId',
+                  name: 'chittu-plan-detail',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => ChituPlanDetailScreen(
+                    planId: state.pathParameters['planId'] ?? '',
+                  ),
+                ),
+                GoRoute(
+                  path: 'investments/:planId',
+                  name: 'chittu-investment-detail',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => ChituInvestmentDetailScreen(
+                    planId: state.pathParameters['planId'] ?? '',
+                  ),
+                  routes: [
+                    GoRoute(
+                      path: 'pay',
+                      name: 'chittu-pay-instalment',
+                      parentNavigatorKey: _rootNavigatorKey,
+                      builder: (context, state) => ChituPaymentScreen(
+                        planId: state.pathParameters['planId'] ?? '',
+                        initialSlotId: state.uri.queryParameters['slotId'],
+                      ),
+                    ),
+                  ],
+                ),
+                GoRoute(
+                  path: 'slots/:slotId',
+                  name: 'chittu-slot-detail',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => ChituSlotDetailScreen(
+                    slotId: state.pathParameters['slotId'] ?? '',
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -146,17 +197,8 @@ final GoRouter appRouter = GoRouter(
             ),
           ],
         ),
-        // 4. Lottery Tab
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/lottery',
-              name: 'lottery',
-              builder: (context, state) => const LotteryTabScreen(),
-            ),
-          ],
-        ),
-        // 5. Payments Tab
+        // TODO(mvp): Lottery StatefulShellBranch temporarily disabled for MVP.
+        // 4. Payments Tab
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -232,11 +274,7 @@ class SJewlsMainShell extends StatelessWidget {
             activeIcon: Icon(Icons.diamond_rounded),
             label: 'Jewelry',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events_outlined),
-            activeIcon: Icon(Icons.emoji_events_rounded),
-            label: 'Lottery',
-          ),
+          // TODO(mvp): Lottery BottomNavigationBarItem temporarily removed for MVP.
           BottomNavigationBarItem(
             icon: Icon(Icons.receipt_long_outlined),
             activeIcon: Icon(Icons.receipt_long_rounded),

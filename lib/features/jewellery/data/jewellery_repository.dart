@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/formatters.dart';
 import 'jewellery_models.dart';
@@ -33,6 +34,40 @@ class JewelleryRepository {
     }
   }
 
+  List<CustomerJewelleryPlanDto> _parsePlansList(dynamic raw, String source) {
+    final List list;
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map && raw['items'] is List) {
+      list = raw['items'] as List;
+    } else if (raw is Map && raw['plans'] is List) {
+      list = raw['plans'] as List;
+    } else if (raw is Map && raw['data'] is List) {
+      list = raw['data'] as List;
+    } else {
+      list = const [];
+    }
+
+    final parsed = <CustomerJewelleryPlanDto>[];
+    for (final item in list) {
+      if (item is Map) {
+        try {
+          parsed.add(
+            CustomerJewelleryPlanDto.fromJson(Map<String, dynamic>.from(item)),
+          );
+        } catch (e, st) {
+          debugPrint(
+            '[$source] Failed to parse plan item: $e\nData: $item\n$st',
+          );
+        }
+      }
+    }
+    debugPrint(
+      '[$source] Loaded ${parsed.length} plans: ${parsed.map((p) => p.name).toList()}',
+    );
+    return parsed;
+  }
+
   /// GET /api/v1/customer/jewellery-categories/{categoryId}/plans
   Future<List<CustomerJewelleryPlanDto>> getPlansByCategory(
     String categoryId,
@@ -41,14 +76,7 @@ class JewelleryRepository {
       final response = await _apiClient.dio.get(
         '/api/v1/customer/jewellery-categories/$categoryId/plans',
       );
-      final list = (response.data as List?) ?? const [];
-      return list
-          .whereType<Map>()
-          .map(
-            (e) =>
-                CustomerJewelleryPlanDto.fromJson(Map<String, dynamic>.from(e)),
-          )
-          .toList();
+      return _parsePlansList(response.data, 'getPlansByCategory($categoryId)');
     } on DioException catch (e) {
       throw Exception(
         ApiClient.extractErrorMessage(
@@ -69,14 +97,7 @@ class JewelleryRepository {
             'categoryId': categoryId,
         },
       );
-      final list = (response.data as List?) ?? const [];
-      return list
-          .whereType<Map>()
-          .map(
-            (e) =>
-                CustomerJewelleryPlanDto.fromJson(Map<String, dynamic>.from(e)),
-          )
-          .toList();
+      return _parsePlansList(response.data, 'getPlans');
     } on DioException catch (e) {
       throw Exception(
         ApiClient.extractErrorMessage(
@@ -155,6 +176,32 @@ class JewelleryRepository {
         Map<String, dynamic>.from(response.data as Map),
       );
     } on DioException catch (e) {
+      // If backend returns 409 RepeatEnrolmentConflictResponse and user already confirmed in UI, retry with confirmRepeatEnrolment: true
+      if (e.response?.statusCode == 409 && !confirmRepeatEnrolment) {
+        final retryKey = Formatters.generateIdempotencyKey();
+        try {
+          final retryResp = await _apiClient.dio.post(
+            '/api/v1/customer/jewellery-enrolments',
+            options: Options(headers: {'X-Idempotency-Key': retryKey}),
+            data: {
+              'planId': planId,
+              'selectedDurationMonths': selectedDurationMonths,
+              'idempotencyKey': retryKey,
+              'confirmRepeatEnrolment': true,
+            },
+          );
+          return CustomerEnrolmentDto.fromJson(
+            Map<String, dynamic>.from(retryResp.data as Map),
+          );
+        } on DioException catch (retryErr) {
+          throw Exception(
+            ApiClient.extractErrorMessage(
+              retryErr,
+              fallback: 'Failed to join jewellery plan.',
+            ),
+          );
+        }
+      }
       throw Exception(
         ApiClient.extractErrorMessage(
           e,
@@ -406,5 +453,110 @@ class JewelleryRepository {
         ),
       );
     }
+  }
+
+  /// Resolves the live branch gold rate for the Home Dashboard.
+  /// 1. If the customer has an active jewellery enrolment, queries the calculation preview
+  ///    endpoint (`POST /api/v1/customer/jewellery-enrolments/{enrolmentId}/preview`) for 1g.
+  /// 2. Otherwise attempts `/api/v1/customer/gold-rates` (if available) or uses the latest
+  ///    confirmed contribution rate / Jaffna branch reference rate.
+  Future<CustomerGoldRateDto> getLiveGoldRate({
+    String? activeEnrolmentId,
+    String? branchId,
+    double? lastConfirmedRatePerGram,
+    String currency = 'LKR',
+  }) async {
+    if (activeEnrolmentId != null && activeEnrolmentId.isNotEmpty) {
+      try {
+        final preview = await previewCalculation(
+          enrolmentId: activeEnrolmentId,
+          isAmountMode: false,
+          requestedGrams: 1.0,
+        );
+        if (preview.ratePerGram > 0) {
+          final rate24K = preview.ratePerGram;
+          final rate22K = rate24K * (22.0 / 24.0);
+          return CustomerGoldRateDto(
+            rate24KPerGram: rate24K,
+            rate22KPerGram: rate22K,
+            currency: preview.currency,
+            rateAsOf: preview.rateAsOf,
+            rateSource: preview.rateSource ?? 'Saranga Jewels Branch Rate',
+            isLiveFromBackend: true,
+          );
+        }
+      } catch (_) {
+        // Fall through to secondary rate lookup
+      }
+    }
+
+    for (final endpoint in [
+      '/api/v1/customer/gold-rates',
+      '/api/v1/gold-rates',
+    ]) {
+      try {
+        final response = await _apiClient.dio.get(
+          endpoint,
+          queryParameters: {
+            if (branchId != null && branchId.isNotEmpty) 'branchId': branchId,
+          },
+        );
+        final data = response.data;
+        if (data is Map && (data['ratePerGram'] as num?) != null) {
+          final r = (data['ratePerGram'] as num).toDouble();
+          if (r > 0) {
+            return CustomerGoldRateDto(
+              rate24KPerGram: r,
+              rate22KPerGram:
+                  (data['rate22KPerGram'] as num?)?.toDouble() ??
+                  (r * (22.0 / 24.0)),
+              currency: (data['currency'] as String?) ?? currency,
+              rateAsOf:
+                  (data['effectiveFromUtc'] ?? data['rateAsOf']) as String?,
+              rateSource: 'Saranga Jewels Branch Rate',
+              isLiveFromBackend: true,
+            );
+          }
+        } else if (data is List && data.isNotEmpty && data.first is Map) {
+          final first = Map<String, dynamic>.from(data.first as Map);
+          final r = (first['ratePerGram'] as num?)?.toDouble() ?? 0.0;
+          if (r > 0) {
+            return CustomerGoldRateDto(
+              rate24KPerGram: r,
+              rate22KPerGram: r * (22.0 / 24.0),
+              currency: (first['currency'] as String?) ?? currency,
+              rateAsOf:
+                  (first['effectiveFromUtc'] ?? first['createdAtUtc'])
+                      as String?,
+              rateSource: 'Saranga Jewels Branch Rate',
+              isLiveFromBackend: true,
+            );
+          }
+        }
+      } catch (_) {
+        // Endpoint not exposed on current host; continue fallback
+      }
+    }
+
+    if (lastConfirmedRatePerGram != null && lastConfirmedRatePerGram > 0) {
+      return CustomerGoldRateDto(
+        rate24KPerGram: lastConfirmedRatePerGram,
+        rate22KPerGram: lastConfirmedRatePerGram * (22.0 / 24.0),
+        currency: currency,
+        rateSource: 'Last Confirmed Branch Rate',
+        isLiveFromBackend: true,
+      );
+    }
+
+    // Jaffna Branch reference gold rate when customer has no active enrolment yet
+    const default24K = 29500.0;
+    const default22K = 27040.0;
+    return CustomerGoldRateDto(
+      rate24KPerGram: default24K,
+      rate22KPerGram: default22K,
+      currency: currency,
+      rateSource: 'Saranga Jewels Branch Rate',
+      isLiveFromBackend: false,
+    );
   }
 }

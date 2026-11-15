@@ -1,5 +1,9 @@
+import 'dart:math';
+
 class Formatters {
   Formatters._();
+
+  static final Random _random = Random();
 
   static const List<String> _months = [
     'Jan',
@@ -108,10 +112,13 @@ class Formatters {
     }
   }
 
-  /// Generates a unique UUID v4 string for X-Idempotency-Key headers
+  /// Generates a valid RFC 4122 UUID v4 string for X-Idempotency-Key headers
   static String generateIdempotencyKey() {
-    final now = DateTime.now().microsecondsSinceEpoch;
-    final hex = now.toRadixString(16).padLeft(16, '0');
-    return 'sjewls-${hex.substring(0, 8)}-${hex.substring(8, 12)}-4${hex.substring(13, 16)}';
+    final bytes = List<int>.generate(16, (_) => _random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 1
+    String hex(int b) => b.toRadixString(16).padLeft(2, '0');
+    final h = bytes.map(hex).join();
+    return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20, 32)}';
   }
 }

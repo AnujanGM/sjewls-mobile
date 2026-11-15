@@ -40,12 +40,16 @@ class _JewelleryPlanDetailScreenState
           .previewEnrolment(planId: plan.id, selectedDurationMonths: duration);
 
       if (!mounted) return;
-      await _showEnrolmentConfirmationSheet(preview);
+      await _showEnrolmentConfirmationSheet(preview, fallbackPlanId: plan.id);
     } catch (e) {
       if (mounted) {
+        final msg = e.toString().replaceFirst('Exception: ', '');
         setState(() {
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+          _errorMessage = msg;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
+        );
       }
     } finally {
       if (mounted) {
@@ -55,198 +59,227 @@ class _JewelleryPlanDetailScreenState
   }
 
   Future<void> _showEnrolmentConfirmationSheet(
-    EnrolmentPreviewResponse preview,
-  ) async {
-    bool confirmRepeat = !preview.requiresRepeatJoinConfirmation;
+    EnrolmentPreviewResponse preview, {
+    required String fallbackPlanId,
+  }) async {
+    final bool needsRepeatConfirmation =
+        preview.requiresRepeatJoinConfirmation || preview.hasPreviouslyJoined;
+    bool confirmRepeat = false;
     bool isSubmitting = false;
     String? sheetError;
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 22,
-                right: 22,
-                top: 22,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Confirm Enrolment Summary',
-                        style: TextStyle(
-                          color: AppColors.dark,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: AppColors.dark),
-                        onPressed: () => Navigator.of(sheetContext).pop(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
+          builder: (sheetBuildContext, setSheetState) {
+            final canSubmit =
+                !isSubmitting && (!needsRepeatConfirmation || confirmRepeat);
+            final bottomInset =
+                MediaQuery.of(sheetBuildContext).viewInsets.bottom +
+                MediaQuery.of(sheetBuildContext).viewPadding.bottom +
+                24;
+
+            return SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: 22,
+                  right: 22,
+                  top: 22,
+                  bottom: bottomInset,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        SJewlsInfoRow(
-                          label: 'Plan Name',
-                          value: preview.planName,
-                          emphasizeValue: true,
-                        ),
-                        if (preview.categoryName != null)
-                          SJewlsInfoRow(
-                            label: 'Category',
-                            value: preview.categoryName!,
-                          ),
-                        SJewlsInfoRow(
-                          label: 'Target Gold Weight',
-                          value: Formatters.grams(
-                            preview.targetGrams,
-                            trimTrailingZeros: true,
-                          ),
-                          emphasizeValue: true,
-                          goldValue: true,
-                        ),
-                        SJewlsInfoRow(
-                          label: 'Selected Duration',
-                          value: '${preview.selectedDurationMonths} Months',
-                        ),
-                        SJewlsInfoRow(
-                          label: 'Making / Plan Charges',
-                          value: Formatters.percentage(
-                            preview.premiumPercentage,
+                        const Text(
+                          'Confirm Enrolment Summary',
+                          style: TextStyle(
+                            color: AppColors.dark,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SJewlsInfoRow(
-                          label: 'Joining Date',
-                          value: Formatters.date(preview.proposedJoiningDate),
-                        ),
-                        SJewlsInfoRow(
-                          label: 'Target Deadline',
-                          value: Formatters.date(preview.proposedDeadline),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: AppColors.dark),
+                          onPressed: () => Navigator.of(sheetContext).pop(),
                         ),
                       ],
                     ),
-                  ),
-                  if (preview.requiresRepeatJoinConfirmation ||
-                      preview.hasPreviouslyJoined) ...[
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.gold),
+                        color: AppColors.primary.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: confirmRepeat,
-                        activeColor: AppColors.primary,
-                        onChanged: (val) {
-                          setSheetState(() => confirmRepeat = val ?? false);
-                        },
-                        title: Text(
-                          'You have ${preview.totalEnrolmentCount} existing enrolment(s) in this plan. Confirm creating an additional enrolment.',
-                          style: const TextStyle(
-                            color: AppColors.dark,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                      child: Column(
+                        children: [
+                          SJewlsInfoRow(
+                            label: 'Plan Name',
+                            value: preview.planName,
+                            emphasizeValue: true,
+                          ),
+                          if (preview.categoryName != null)
+                            SJewlsInfoRow(
+                              label: 'Category',
+                              value: preview.categoryName!,
+                            ),
+                          SJewlsInfoRow(
+                            label: 'Target Gold Weight',
+                            value: Formatters.grams(
+                              preview.targetGrams,
+                              trimTrailingZeros: true,
+                            ),
+                            emphasizeValue: true,
+                            goldValue: true,
+                          ),
+                          SJewlsInfoRow(
+                            label: 'Selected Duration',
+                            value: '${preview.selectedDurationMonths} Months',
+                          ),
+                          SJewlsInfoRow(
+                            label: 'Making / Plan Charges',
+                            value: Formatters.percentage(
+                              preview.premiumPercentage,
+                            ),
+                          ),
+                          SJewlsInfoRow(
+                            label: 'Joining Date',
+                            value: Formatters.date(preview.proposedJoiningDate),
+                          ),
+                          SJewlsInfoRow(
+                            label: 'Target Deadline',
+                            value: Formatters.date(preview.proposedDeadline),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (needsRepeatConfirmation) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.gold),
+                        ),
+                        child: CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: confirmRepeat,
+                          activeColor: AppColors.primary,
+                          onChanged: (val) {
+                            setSheetState(() => confirmRepeat = val ?? false);
+                          },
+                          title: Text(
+                            'You have ${preview.totalEnrolmentCount} existing enrolment(s) in this plan. Confirm creating an additional enrolment.',
+                            style: const TextStyle(
+                              color: AppColors.dark,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                  if (sheetError != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      sheetError!,
-                      style: const TextStyle(color: Colors.red, fontSize: 13),
-                    ),
-                  ],
-                  const SizedBox(height: 18),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                    ),
-                    onPressed: (isSubmitting || !confirmRepeat)
-                        ? null
-                        : () async {
-                            setSheetState(() {
-                              isSubmitting = true;
-                              sheetError = null;
-                            });
-                            try {
-                              final created = await ref
-                                  .read(jewelleryRepositoryProvider)
-                                  .createEnrolment(
-                                    planId: preview.planId,
-                                    selectedDurationMonths:
-                                        preview.selectedDurationMonths,
-                                    confirmRepeatEnrolment: confirmRepeat,
-                                  );
-                              ref.invalidate(customerEnrolmentsProvider);
-                              ref.invalidate(notificationsProvider);
-                              if (sheetContext.mounted) {
-                                Navigator.of(sheetContext).pop();
-                              }
-                              if (mounted) {
-                                ScaffoldMessenger.of(this.context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Enrolment activated! You can now buy gold toward your target.',
-                                    ),
-                                    backgroundColor: AppColors.primary,
-                                  ),
-                                );
-                                this.context.pushReplacement(
-                                  '/jewelry/enrolments/${created.enrolmentId}',
-                                );
-                              }
-                            } catch (e) {
+                    ],
+                    if (sheetError != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        sheetError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                      onPressed: !canSubmit
+                          ? null
+                          : () async {
                               setSheetState(() {
-                                sheetError = e.toString().replaceFirst(
-                                  'Exception: ',
-                                  '',
-                                );
+                                isSubmitting = true;
+                                sheetError = null;
                               });
-                            } finally {
-                              setSheetState(() => isSubmitting = false);
-                            }
-                          },
-                    child: isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.white,
-                            ),
-                          )
-                        : const Text('Confirm & Join Plan'),
-                  ),
-                ],
+                              try {
+                                final resolvedPlanId =
+                                    preview.planId.trim().isNotEmpty
+                                    ? preview.planId.trim()
+                                    : fallbackPlanId;
+                                final created = await ref
+                                    .read(jewelleryRepositoryProvider)
+                                    .createEnrolment(
+                                      planId: resolvedPlanId,
+                                      selectedDurationMonths:
+                                          preview.selectedDurationMonths,
+                                      confirmRepeatEnrolment:
+                                          needsRepeatConfirmation
+                                          ? confirmRepeat
+                                          : false,
+                                    );
+                                ref.invalidate(customerEnrolmentsProvider);
+                                ref.invalidate(liveGoldRateProvider);
+                                ref.invalidate(notificationsProvider);
+                                if (sheetContext.mounted) {
+                                  Navigator.of(sheetContext).pop();
+                                }
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Enrolment activated! You can now buy gold toward your target.',
+                                      ),
+                                      backgroundColor: AppColors.primary,
+                                    ),
+                                  );
+                                  if (created.enrolmentId.isNotEmpty) {
+                                    context.go(
+                                      '/jewelry/enrolments/${created.enrolmentId}',
+                                    );
+                                  } else {
+                                    context.go('/jewelry');
+                                  }
+                                }
+                              } catch (e) {
+                                if (sheetContext.mounted) {
+                                  setSheetState(() {
+                                    sheetError = e.toString().replaceFirst(
+                                      'Exception: ',
+                                      '',
+                                    );
+                                  });
+                                }
+                              } finally {
+                                if (sheetContext.mounted) {
+                                  setSheetState(() => isSubmitting = false);
+                                }
+                              }
+                            },
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.white,
+                              ),
+                            )
+                          : const Text('Confirm & Join Plan'),
+                    ),
+                  ],
+                ),
               ),
             );
           },

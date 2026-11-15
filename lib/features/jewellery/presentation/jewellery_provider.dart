@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/presentation/auth_provider.dart';
+import '../../profile/presentation/profile_provider.dart';
 import '../data/jewellery_models.dart';
 import '../data/jewellery_repository.dart';
 
@@ -84,3 +85,42 @@ final allCustomerPaymentsProvider =
       });
       return allPayments;
     });
+
+final liveGoldRateProvider = FutureProvider.autoDispose<CustomerGoldRateDto>((
+  ref,
+) async {
+  final repo = ref.watch(jewelleryRepositoryProvider);
+  final profileAsync = ref.watch(customerProfileProvider);
+  final enrolmentsAsync = ref.watch(customerEnrolmentsProvider);
+
+  final branchId = profileAsync.maybeWhen(
+    data: (p) => p.primaryBranchId,
+    orElse: () => null,
+  );
+
+  final enrolments = enrolmentsAsync.maybeWhen(
+    data: (res) => res.items,
+    orElse: () => const <CustomerEnrolmentDto>[],
+  );
+
+  String? activeEnrolmentId;
+  String currency = 'LKR';
+  for (final item in enrolments) {
+    if (item.currency.isNotEmpty) {
+      currency = item.currency;
+    }
+    if (item.isContributionAllowed && item.enrolmentId.isNotEmpty) {
+      activeEnrolmentId = item.enrolmentId;
+      break;
+    }
+  }
+  activeEnrolmentId ??= enrolments.isNotEmpty
+      ? enrolments.first.enrolmentId
+      : null;
+
+  return repo.getLiveGoldRate(
+    activeEnrolmentId: activeEnrolmentId,
+    branchId: branchId,
+    currency: currency,
+  );
+});

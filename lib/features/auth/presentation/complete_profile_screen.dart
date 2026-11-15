@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/network/api_client.dart';
@@ -68,6 +69,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       return;
     }
 
+    final nic = _nicController.text.trim();
+    if (nic.isEmpty) {
+      setState(() => _errorMessage = 'Please enter your NIC');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -81,9 +88,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         registrationToken: widget.registrationToken,
         fullName: name,
         dateOfBirth: _formatDob(_dob!),
-        nic: _nicController.text.trim().isEmpty
-            ? null
-            : _nicController.text.trim(),
+        nic: nic,
         email: widget.isPhone
             ? (_secondaryController.text.trim().isEmpty
                   ? null
@@ -155,8 +160,9 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
               TextField(
                 controller: _nicController,
+                textCapitalization: TextCapitalization.characters,
                 decoration: const InputDecoration(
-                  labelText: 'NIC (optional)',
+                  labelText: 'NIC *',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -166,7 +172,13 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 controller: _secondaryController,
                 keyboardType: widget.isPhone
                     ? TextInputType.emailAddress
-                    : TextInputType.phone,
+                    : const TextInputType.numberWithOptions(
+                        signed: false,
+                        decimal: false,
+                      ),
+                inputFormatters: widget.isPhone
+                    ? null
+                    : [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(
                   labelText: widget.isPhone
                       ? 'Email (optional)'
