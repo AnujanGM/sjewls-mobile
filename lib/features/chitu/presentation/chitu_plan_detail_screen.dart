@@ -741,12 +741,16 @@ class _ChituJoinBottomSheetState extends ConsumerState<_ChituJoinBottomSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Join Chittu Plan',
-                style: TextStyle(
-                  color: AppColors.dark,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              const Expanded(
+                child: Text(
+                  'Join Chittu Plan',
+                  style: TextStyle(
+                    color: AppColors.dark,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               IconButton(
@@ -759,15 +763,20 @@ class _ChituJoinBottomSheetState extends ConsumerState<_ChituJoinBottomSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Select Slot Quantity',
-                style: TextStyle(
-                  color: AppColors.dark,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14.5,
+              const Expanded(
+                child: Text(
+                  'Select Slot Quantity',
+                  style: TextStyle(
+                    color: AppColors.dark,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     onPressed: _quantity > 1 && !_isLoadingPreview

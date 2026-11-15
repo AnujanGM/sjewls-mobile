@@ -135,14 +135,19 @@ class EnrolmentDetailScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Saved Gold: ${Formatters.grams(enrolment.netAccumulatedGoldGrams)}',
-                            style: const TextStyle(
-                              color: AppColors.gold,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
+                          Flexible(
+                            child: Text(
+                              'Saved Gold: ${Formatters.grams(enrolment.netAccumulatedGoldGrams)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.gold,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             Formatters.percentage(
                               enrolment.individualProgressPercentage,
@@ -173,18 +178,27 @@ class EnrolmentDetailScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Target: ${Formatters.grams(enrolment.targetGrams, trimTrailingZeros: true)}',
-                            style: TextStyle(
-                              color: AppColors.white.withValues(alpha: 0.85),
-                              fontSize: 12.5,
+                          Flexible(
+                            child: Text(
+                              'Target: ${Formatters.grams(enrolment.targetGrams, trimTrailingZeros: true)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppColors.white.withValues(alpha: 0.85),
+                                fontSize: 12.5,
+                              ),
                             ),
                           ),
-                          Text(
-                            'Remaining: ${Formatters.grams(enrolment.remainingGrams)}',
-                            style: TextStyle(
-                              color: AppColors.white.withValues(alpha: 0.85),
-                              fontSize: 12.5,
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'Remaining: ${Formatters.grams(enrolment.remainingGrams)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppColors.white.withValues(alpha: 0.85),
+                                fontSize: 12.5,
+                              ),
                             ),
                           ),
                         ],
@@ -457,17 +471,22 @@ class EnrolmentDetailScreen extends ConsumerWidget {
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        Formatters.currency(
-                                          payment.currencyAmount,
-                                          currencyCode: payment.currency,
-                                        ),
-                                        style: const TextStyle(
-                                          color: AppColors.primary,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
+                                      Flexible(
+                                        child: Text(
+                                          Formatters.currency(
+                                            payment.currencyAmount,
+                                            currencyCode: payment.currency,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: AppColors.primary,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
+                                      const SizedBox(width: 8),
                                       SJewlsStatusBadge.fromStatus(
                                         payment.status,
                                       ),

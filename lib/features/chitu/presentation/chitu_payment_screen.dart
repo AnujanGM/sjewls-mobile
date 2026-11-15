@@ -341,15 +341,20 @@ class _ChituPaymentScreenState extends ConsumerState<ChituPaymentScreen> {
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
                                     children: [
-                                      const Text(
-                                        'Instalments to Pay:',
-                                        style: TextStyle(
-                                          color: AppColors.dark,
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w600,
+                                      const Expanded(
+                                        child: Text(
+                                          'Instalments to Pay:',
+                                          style: TextStyle(
+                                            color: AppColors.dark,
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           IconButton(
                                             onPressed:

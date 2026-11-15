@@ -195,24 +195,34 @@ class ChituInvestmentDetailScreen extends ConsumerWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Round ${plan.currentRoundIndex} of ${plan.durationMonths}',
-                                  style: const TextStyle(
-                                    color: AppColors.white,
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                if (plan.nextRaffleDate != null &&
-                                    plan.nextRaffleDate!.isNotEmpty)
-                                  Text(
-                                    'Next Draw: ${Formatters.date(plan.nextRaffleDate)}',
+                                Flexible(
+                                  child: Text(
+                                    'Round ${plan.currentRoundIndex} of ${plan.durationMonths}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      color: AppColors.gold,
+                                      color: AppColors.white,
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
+                                ),
+                                if (plan.nextRaffleDate != null &&
+                                    plan.nextRaffleDate!.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      'Next Draw: ${Formatters.date(plan.nextRaffleDate)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: AppColors.gold,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ],
@@ -223,12 +233,16 @@ class ChituInvestmentDetailScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Your Slots (${plan.slots.length})',
-                            style: const TextStyle(
-                              color: AppColors.dark,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Text(
+                              'Your Slots (${plan.slots.length})',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.dark,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           if (plan.canPurchaseAdditionalSlots)

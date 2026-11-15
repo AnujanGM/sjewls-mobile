@@ -102,12 +102,16 @@ class _JewelleryPlanDetailScreenState
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Confirm Enrolment Summary',
-                          style: TextStyle(
-                            color: AppColors.dark,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        const Expanded(
+                          child: Text(
+                            'Confirm Enrolment Summary',
+                            style: TextStyle(
+                              color: AppColors.dark,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         IconButton(
@@ -343,11 +347,15 @@ class _JewelleryPlanDetailScreenState
                       ),
                     ),
                   ),
-                  if (plan.categoryName != null)
-                    SJewlsStatusBadge(
-                      label: plan.categoryName!,
-                      isHighlighted: true,
+                  if (plan.categoryName != null) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: SJewlsStatusBadge(
+                        label: plan.categoryName!,
+                        isHighlighted: true,
+                      ),
                     ),
+                  ],
                 ],
               ),
               if (plan.description != null &&

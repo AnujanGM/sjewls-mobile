@@ -290,8 +290,8 @@ class JewelleryRepository {
     double? enteredAmount,
     double? requestedGrams,
   }) async {
-    final primaryMode = isAmountMode ? 'Amount' : 'Grams';
-    final fallbackMode = isAmountMode ? 'BuyAmount' : 'BuyGram';
+    final primaryMode = isAmountMode ? 'BuyAmount' : 'BuyGram';
+    final fallbackMode = isAmountMode ? 'Amount' : 'Grams';
 
     try {
       final response = await _apiClient.dio.post(
@@ -345,8 +345,8 @@ class JewelleryRepository {
     double? enteredAmount,
     double? requestedGrams,
   }) async {
-    final primaryMode = isAmountMode ? 'Amount' : 'Grams';
-    final fallbackMode = isAmountMode ? 'BuyAmount' : 'BuyGram';
+    final primaryMode = isAmountMode ? 'BuyAmount' : 'BuyGram';
+    final fallbackMode = isAmountMode ? 'Amount' : 'Grams';
 
     try {
       final response = await _apiClient.dio.post(

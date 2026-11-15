@@ -262,16 +262,21 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    Formatters.dateTime(item.createdAtUtc),
-                                    style: TextStyle(
-                                      color: AppColors.dark.withValues(
-                                        alpha: 0.52,
+                                  Flexible(
+                                    child: Text(
+                                      Formatters.dateTime(item.createdAtUtc),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: AppColors.dark.withValues(
+                                          alpha: 0.52,
+                                        ),
+                                        fontSize: 12,
                                       ),
-                                      fontSize: 12,
                                     ),
                                   ),
-                                  if (isUnread)
+                                  if (isUnread) ...[
+                                    const SizedBox(width: 8),
                                     const Text(
                                       'Tap to mark read',
                                       style: TextStyle(
@@ -280,6 +285,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
+                                  ],
                                 ],
                               ),
                             ],

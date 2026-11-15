@@ -7,6 +7,7 @@ import 'package:sjewls_mobile/core/utils/formatters.dart';
 import 'package:sjewls_mobile/features/auth/presentation/complete_profile_screen.dart';
 import 'package:sjewls_mobile/features/auth/presentation/login_screen.dart';
 import 'package:sjewls_mobile/features/chitu/data/chitu_models.dart';
+import 'package:sjewls_mobile/features/jewellery/presentation/buy_gold_screen.dart';
 import 'package:sjewls_mobile/features/chitu/presentation/chitu_payment_screen.dart';
 import 'package:sjewls_mobile/features/chitu/presentation/chitu_provider.dart';
 import 'package:sjewls_mobile/features/chitu/presentation/chitu_tab_screen.dart';
@@ -717,6 +718,44 @@ void main() {
           find.byKey(const Key('home_live_gold_rate_card')),
           findsOneWidget,
         );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'BuyGoldScreen renders without horizontal overflow on narrow screens',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(313, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              enrolmentDetailProvider('e1').overrideWith(
+                (ref) async => CustomerEnrolmentDto.fromJson({
+                  'enrolmentId': 'e1',
+                  'enrolmentDisplayId': 'ENR-001',
+                  'planId': 'p1',
+                  'planName': 'Traditional 22K Gold Thali Pendant',
+                  'targetGrams': 8.0,
+                  'netAccumulatedGoldGrams': 3.25,
+                  'remainingGrams': 4.75,
+                  'totalConfirmedMoneyPaid': 95000.0,
+                  'currency': 'LKR',
+                  'selectedDurationMonths': 12,
+                  'currentMonthIndex': 5,
+                  'isContributionAllowed': true,
+                  'enrolmentStatus': 'Active',
+                }),
+              ),
+            ],
+            child: const MaterialApp(home: BuyGoldScreen(enrolmentId: 'e1')),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Traditional 22K Gold Thali Pendant'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

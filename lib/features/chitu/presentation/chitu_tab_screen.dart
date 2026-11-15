@@ -384,20 +384,29 @@ class _ChituTabScreenState extends ConsumerState<ChituTabScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Duration: ${plan.durationMonths} Months (Round ${plan.currentRoundIndex})',
-                    style: const TextStyle(
-                      color: AppColors.dark,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Text(
+                      'Duration: ${plan.durationMonths} Months (Round ${plan.currentRoundIndex})',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.dark,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  Text(
-                    '${plan.availableSlotsCount} / ${plan.totalSlotCapacity} slots free',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      '${plan.availableSlotsCount} / ${plan.totalSlotCapacity} slots free',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -420,19 +429,27 @@ class _ChituTabScreenState extends ConsumerState<ChituTabScreen>
                 children: [
                   if (plan.nextRaffleDate != null &&
                       plan.nextRaffleDate!.isNotEmpty)
-                    Text(
-                      'Next Draw: ${Formatters.date(plan.nextRaffleDate)}',
-                      style: TextStyle(
-                        color: AppColors.dark.withValues(alpha: 0.7),
-                        fontSize: 12,
+                    Flexible(
+                      child: Text(
+                        'Next Draw: ${Formatters.date(plan.nextRaffleDate)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.dark.withValues(alpha: 0.7),
+                          fontSize: 12,
+                        ),
                       ),
                     )
                   else
-                    Text(
-                      'Starts: ${Formatters.date(plan.startDate)}',
-                      style: TextStyle(
-                        color: AppColors.dark.withValues(alpha: 0.7),
-                        fontSize: 12,
+                    Flexible(
+                      child: Text(
+                        'Starts: ${Formatters.date(plan.startDate)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.dark.withValues(alpha: 0.7),
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   if (plan.customerOwnedSlotsCount > 0)
@@ -456,6 +473,7 @@ class _ChituTabScreenState extends ConsumerState<ChituTabScreen>
                     )
                   else
                     const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           'View Plan & Terms',

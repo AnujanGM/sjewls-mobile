@@ -514,19 +514,28 @@ class _JewelleryTabScreenState extends ConsumerState<JewelleryTabScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Progress: ${Formatters.percentage(enrolment.individualProgressPercentage)}',
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                            Flexible(
+                              child: Text(
+                                'Progress: ${Formatters.percentage(enrolment.individualProgressPercentage)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
-                            Text(
-                              'Deadline: ${Formatters.date(enrolment.deadline)}',
-                              style: TextStyle(
-                                color: AppColors.dark.withValues(alpha: 0.68),
-                                fontSize: 12.5,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Deadline: ${Formatters.date(enrolment.deadline)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppColors.dark.withValues(alpha: 0.68),
+                                  fontSize: 12.5,
+                                ),
                               ),
                             ),
                           ],

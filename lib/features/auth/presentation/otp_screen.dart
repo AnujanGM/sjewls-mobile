@@ -79,12 +79,16 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Text(
-                    widget.isPhone ? 'Verify Phone' : 'Verify Email',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.dark,
+                  Expanded(
+                    child: Text(
+                      widget.isPhone ? 'Verify Phone' : 'Verify Email',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.dark,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -118,40 +122,47 @@ class _OtpScreenState extends State<OtpScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (index) {
-                  return SizedBox(
-                    width: 48,
-                    height: 56,
-                    child: TextField(
-                      controller: _controllers[index],
-                      focusNode: _focusNodes[index],
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      maxLength: 1,
-                      style: const TextStyle(
-                        color: AppColors.inputText,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: InputDecoration(
-                        hintStyle: const TextStyle(color: AppColors.dark),
-                        counterText: '', // hide the 0/1 counter
-                        contentPadding: EdgeInsets.zero,
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(28), // oval look
-                          borderSide: BorderSide(
-                            color: AppColors.dark.withValues(alpha: 0.3),
+                  return Flexible(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 48),
+                      height: 56,
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      child: TextField(
+                        controller: _controllers[index],
+                        focusNode: _focusNodes[index],
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        maxLength: 1,
+                        style: const TextStyle(
+                          color: AppColors.inputText,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: InputDecoration(
+                          hintStyle: const TextStyle(color: AppColors.dark),
+                          counterText: '', // hide the 0/1 counter
+                          contentPadding: EdgeInsets.zero,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              28,
+                            ), // oval look
+                            borderSide: BorderSide(
+                              color: AppColors.dark.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(28),
+                            borderSide: const BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(28),
-                          borderSide: const BorderSide(
-                            color: AppColors.primary,
-                            width: 2,
-                          ),
-                        ),
+                        onChanged: (value) => _onChanged(value, index),
                       ),
-                      onChanged: (value) => _onChanged(value, index),
                     ),
                   );
                 }),

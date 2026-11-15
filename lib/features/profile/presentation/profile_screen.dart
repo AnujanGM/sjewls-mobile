@@ -667,12 +667,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Linked Plans Overview',
-                              style: TextStyle(
-                                color: AppColors.dark,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                            const Expanded(
+                              child: Text(
+                                'Linked Plans Overview',
+                                style: TextStyle(
+                                  color: AppColors.dark,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             TextButton(

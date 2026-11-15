@@ -276,20 +276,29 @@ class _BuyGoldScreenState extends ConsumerState<BuyGoldScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Saved: ${Formatters.grams(enrolment.netAccumulatedGoldGrams)}',
-                          style: const TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                        Flexible(
+                          child: Text(
+                            'Saved: ${Formatters.grams(enrolment.netAccumulatedGoldGrams)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
-                        Text(
-                          'Remaining: ${Formatters.grams(enrolment.remainingGrams)}',
-                          style: const TextStyle(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Remaining: ${Formatters.grams(enrolment.remainingGrams)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -464,14 +473,19 @@ class _BuyGoldScreenState extends ConsumerState<BuyGoldScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Calculation Preview',
-                              style: TextStyle(
-                                color: AppColors.dark,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                            const Expanded(
+                              child: Text(
+                                'Calculation Preview',
+                                style: TextStyle(
+                                  color: AppColors.dark,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 8),
                             const SJewlsStatusBadge(label: 'Estimate'),
                           ],
                         ),
@@ -552,14 +566,19 @@ class _BuyGoldScreenState extends ConsumerState<BuyGoldScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Locked Payment Quote',
-                              style: TextStyle(
-                                color: AppColors.dark,
-                                fontSize: 16.5,
-                                fontWeight: FontWeight.bold,
+                            const Expanded(
+                              child: Text(
+                                'Locked Payment Quote',
+                                style: TextStyle(
+                                  color: AppColors.dark,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 8),
                             SJewlsStatusBadge(
                               label: isQuoteExpired
                                   ? 'Expired'
@@ -620,14 +639,22 @@ class _BuyGoldScreenState extends ConsumerState<BuyGoldScreen> {
                         else
                           Row(
                             children: [
-                              OutlinedButton(
-                                onPressed: _isLockingQuote
-                                    ? null
-                                    : _refreshQuoteStatus,
-                                child: const Text('Check Status'),
+                              Expanded(
+                                flex: 4,
+                                child: OutlinedButton(
+                                  onPressed: _isLockingQuote
+                                      ? null
+                                      : _refreshQuoteStatus,
+                                  child: const Text(
+                                    'Check Status',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
+                                flex: 5,
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.primary,
@@ -645,7 +672,11 @@ class _BuyGoldScreenState extends ConsumerState<BuyGoldScreen> {
                                             color: AppColors.white,
                                           ),
                                         )
-                                      : const Text('Pay Now'),
+                                      : const Text(
+                                          'Pay Now',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                 ),
                               ),
                             ],

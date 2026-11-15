@@ -421,12 +421,16 @@ class _PaymentReceiptBottomSheetState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Transaction Receipt',
-                style: TextStyle(
-                  color: AppColors.dark,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              const Expanded(
+                child: Text(
+                  'Transaction Receipt',
+                  style: TextStyle(
+                    color: AppColors.dark,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               IconButton(
