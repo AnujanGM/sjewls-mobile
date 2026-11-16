@@ -457,15 +457,55 @@ class JewelleryRepository {
 
   /// Resolves the live branch gold rate for the Home Dashboard.
   /// 1. If the customer has an active jewellery enrolment, queries the calculation preview
-  ///    endpoint (`POST /api/v1/customer/jewellery-enrolments/{enrolmentId}/preview`) for 1g.
-  /// 2. Otherwise attempts `/api/v1/customer/gold-rates` (if available) or uses the latest
-  ///    confirmed contribution rate / Jaffna branch reference rate.
+  /// Fetches the authoritative live gold rate (24K and 22K in LKR) configured in
+  /// the admin dashboard / live market feed.
+  /// 1. Queries authoritative endpoint `GET /api/v1/customer/gold-rate`.
+  /// 2. If unavailable, falls back to active jewellery enrolment preview calculation.
+  /// 3. Otherwise uses the last confirmed contribution rate or Jaffna branch reference rate.
   Future<CustomerGoldRateDto> getLiveGoldRate({
     String? activeEnrolmentId,
     String? branchId,
     double? lastConfirmedRatePerGram,
     String currency = 'LKR',
   }) async {
+    // 1. Primary: Direct live gold rate endpoint from backend / admin dashboard
+    for (final endpoint in [
+      '/api/v1/customer/gold-rate',
+      '/api/v1/gold-rate',
+    ]) {
+      try {
+        final response = await _apiClient.dio.get(
+          endpoint,
+          queryParameters: {
+            if (branchId != null && branchId.isNotEmpty) 'branchId': branchId,
+          },
+        );
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final dto = CustomerGoldRateDto.fromJson(data);
+          if (dto.rate24KPerGram > 0) {
+            return dto;
+          }
+        } else if (data is Map) {
+          final dto = CustomerGoldRateDto.fromJson(
+            Map<String, dynamic>.from(data),
+          );
+          if (dto.rate24KPerGram > 0) {
+            return dto;
+          }
+        } else if (data is List && data.isNotEmpty && data.first is Map) {
+          final first = Map<String, dynamic>.from(data.first as Map);
+          final dto = CustomerGoldRateDto.fromJson(first);
+          if (dto.rate24KPerGram > 0) {
+            return dto;
+          }
+        }
+      } catch (_) {
+        // Continue to next endpoint or fallback
+      }
+    }
+
+    // 2. Secondary fallback: preview calculation on active enrolment if available
     if (activeEnrolmentId != null && activeEnrolmentId.isNotEmpty) {
       try {
         final preview = await previewCalculation(
@@ -486,58 +526,11 @@ class JewelleryRepository {
           );
         }
       } catch (_) {
-        // Fall through to secondary rate lookup
+        // Fall through to last confirmed rate
       }
     }
 
-    for (final endpoint in [
-      '/api/v1/customer/gold-rates',
-      '/api/v1/gold-rates',
-    ]) {
-      try {
-        final response = await _apiClient.dio.get(
-          endpoint,
-          queryParameters: {
-            if (branchId != null && branchId.isNotEmpty) 'branchId': branchId,
-          },
-        );
-        final data = response.data;
-        if (data is Map && (data['ratePerGram'] as num?) != null) {
-          final r = (data['ratePerGram'] as num).toDouble();
-          if (r > 0) {
-            return CustomerGoldRateDto(
-              rate24KPerGram: r,
-              rate22KPerGram:
-                  (data['rate22KPerGram'] as num?)?.toDouble() ??
-                  (r * (22.0 / 24.0)),
-              currency: (data['currency'] as String?) ?? currency,
-              rateAsOf:
-                  (data['effectiveFromUtc'] ?? data['rateAsOf']) as String?,
-              rateSource: 'Saranga Jewels Branch Rate',
-              isLiveFromBackend: true,
-            );
-          }
-        } else if (data is List && data.isNotEmpty && data.first is Map) {
-          final first = Map<String, dynamic>.from(data.first as Map);
-          final r = (first['ratePerGram'] as num?)?.toDouble() ?? 0.0;
-          if (r > 0) {
-            return CustomerGoldRateDto(
-              rate24KPerGram: r,
-              rate22KPerGram: r * (22.0 / 24.0),
-              currency: (first['currency'] as String?) ?? currency,
-              rateAsOf:
-                  (first['effectiveFromUtc'] ?? first['createdAtUtc'])
-                      as String?,
-              rateSource: 'Saranga Jewels Branch Rate',
-              isLiveFromBackend: true,
-            );
-          }
-        }
-      } catch (_) {
-        // Endpoint not exposed on current host; continue fallback
-      }
-    }
-
+    // 3. Fallback: Last confirmed contribution rate
     if (lastConfirmedRatePerGram != null && lastConfirmedRatePerGram > 0) {
       return CustomerGoldRateDto(
         rate24KPerGram: lastConfirmedRatePerGram,
@@ -548,7 +541,7 @@ class JewelleryRepository {
       );
     }
 
-    // Jaffna Branch reference gold rate when customer has no active enrolment yet
+    // 4. Default Jaffna Branch reference gold rate when offline or unconfigured
     const default24K = 29500.0;
     const default22K = 27040.0;
     return CustomerGoldRateDto(

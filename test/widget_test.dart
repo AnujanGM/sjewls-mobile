@@ -759,5 +759,48 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+
+    test(
+      'CustomerGoldRateDto correctly parses live backend payload and overrides',
+      () {
+        final liveJson = {
+          'rate24kPerGram': 41271.39,
+          'rate22kPerGram': 37832.11,
+          'currency': 'LKR',
+          'source': 'LiveSpot (Market Feed)',
+          'isOverridden': false,
+          'effectiveFromUtc': '2026-11-16T22:40:07.1985292+00:00',
+          'branchId': null,
+          'branchName': null,
+        };
+
+        final liveDto = CustomerGoldRateDto.fromJson(liveJson);
+        expect(liveDto.rate24KPerGram, 41271.39);
+        expect(liveDto.rate22KPerGram, 37832.11);
+        expect(liveDto.currency, 'LKR');
+        expect(liveDto.rateSource, 'LiveSpot (Market Feed)');
+        expect(liveDto.isOverridden, isFalse);
+        expect(liveDto.sovereign22KRate, closeTo(37832.11 * 8.0, 0.01));
+        expect(liveDto.sovereign24KRate, closeTo(41271.39 * 8.0, 0.01));
+
+        final overrideJson = {
+          'rate24kPerGram': 42500.0,
+          'rate22kPerGram': 38958.33,
+          'currency': 'LKR',
+          'source': 'Store Override',
+          'isOverridden': true,
+          'effectiveFromUtc': '2026-11-16T23:00:00Z',
+          'branchId': 'b-jaffna',
+          'branchName': 'Jaffna Main Branch',
+        };
+
+        final overrideDto = CustomerGoldRateDto.fromJson(overrideJson);
+        expect(overrideDto.rate24KPerGram, 42500.0);
+        expect(overrideDto.rate22KPerGram, 38958.33);
+        expect(overrideDto.isOverridden, isTrue);
+        expect(overrideDto.branchName, 'Jaffna Main Branch');
+        expect(overrideDto.rateSource, 'Store Override');
+      },
+    );
   });
 }

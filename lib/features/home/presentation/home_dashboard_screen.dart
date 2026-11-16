@@ -707,11 +707,6 @@ class HomeDashboardScreen extends ConsumerWidget {
     AsyncValue<CustomerGoldRateDto> liveGoldRateAsync,
     AsyncValue profileAsync,
   ) {
-    final branchName = profileAsync.maybeWhen(
-      data: (p) => p.primaryBranchName ?? p.primaryBranchCode ?? 'Jaffna',
-      orElse: () => 'Jaffna',
-    );
-
     final rateDto = liveGoldRateAsync.maybeWhen(
       data: (dto) => dto,
       orElse: () => const CustomerGoldRateDto(
@@ -722,6 +717,14 @@ class HomeDashboardScreen extends ConsumerWidget {
         isLiveFromBackend: false,
       ),
     );
+
+    final branchName =
+        (rateDto.branchName != null && rateDto.branchName!.isNotEmpty)
+        ? rateDto.branchName!
+        : profileAsync.maybeWhen(
+            data: (p) => p.primaryBranchName ?? p.primaryBranchCode ?? 'Jaffna',
+            orElse: () => 'Jaffna',
+          );
 
     return Container(
       key: const Key('home_live_gold_rate_card'),
@@ -781,7 +784,10 @@ class HomeDashboardScreen extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            '$branchName Branch • ${rateDto.currency}',
+                            rateDto.rateSource != null &&
+                                    rateDto.rateSource!.isNotEmpty
+                                ? '$branchName • ${rateDto.rateSource}'
+                                : '$branchName Branch • ${rateDto.currency}',
                             style: TextStyle(
                               color: AppColors.dark.withValues(alpha: 0.65),
                               fontSize: 12,

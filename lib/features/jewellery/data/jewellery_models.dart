@@ -508,6 +508,9 @@ class CustomerGoldRateDto {
   final String? rateAsOf;
   final String? rateSource;
   final bool isLiveFromBackend;
+  final bool isOverridden;
+  final String? branchId;
+  final String? branchName;
 
   const CustomerGoldRateDto({
     required this.rate24KPerGram,
@@ -516,7 +519,41 @@ class CustomerGoldRateDto {
     this.rateAsOf,
     this.rateSource,
     this.isLiveFromBackend = true,
+    this.isOverridden = false,
+    this.branchId,
+    this.branchName,
   });
+
+  factory CustomerGoldRateDto.fromJson(Map<String, dynamic> json) {
+    final rate24k =
+        (json['rate24kPerGram'] as num?)?.toDouble() ??
+        (json['rate24KPerGram'] as num?)?.toDouble() ??
+        (json['ratePerGram'] as num?)?.toDouble() ??
+        0.0;
+
+    final rate22k =
+        (json['rate22kPerGram'] as num?)?.toDouble() ??
+        (json['rate22KPerGram'] as num?)?.toDouble() ??
+        (rate24k > 0 ? (rate24k * (22.0 / 24.0)) : 0.0);
+
+    return CustomerGoldRateDto(
+      rate24KPerGram: rate24k,
+      rate22KPerGram: rate22k,
+      currency: (json['currency'] as String?) ?? 'LKR',
+      rateAsOf:
+          (json['effectiveFromUtc'] ?? json['rateAsOf'] ?? json['createdAtUtc'])
+              ?.toString(),
+      rateSource:
+          (json['source'] ?? json['rateSource'])?.toString() ??
+          (json['isOverridden'] == true
+              ? 'Store Override'
+              : 'Saranga Jewels Rate'),
+      isLiveFromBackend: true,
+      isOverridden: json['isOverridden'] == true,
+      branchId: json['branchId']?.toString(),
+      branchName: json['branchName']?.toString(),
+    );
+  }
 
   double get sovereign22KRate => rate22KPerGram * 8.0;
   double get sovereign24KRate => rate24KPerGram * 8.0;
