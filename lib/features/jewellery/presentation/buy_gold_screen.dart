@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/sjewls_widgets.dart';
+import '../../chitu/presentation/chitu_provider.dart';
 import '../data/jewellery_models.dart';
 import 'jewellery_provider.dart';
 
@@ -203,13 +204,20 @@ class _BuyGoldScreenState extends ConsumerState<BuyGoldScreen> {
           .read(jewelleryRepositoryProvider)
           .initiateQuotePayment(
             quote.quoteId,
+            enrolmentId: widget.enrolmentId,
             fallbackAmount: quote.amountToPay,
+            fallbackGrams: quote.totalGoldCredit,
+            ratePerGram: quote.ratePerGram,
             fallbackCurrency: quote.currency,
+            isAmountMode: _isAmountMode,
           );
       if (mounted) {
         setState(() {
           _paymentInitiationResult = result;
         });
+        ref.invalidate(enrolmentDetailProvider(widget.enrolmentId));
+        ref.invalidate(customerEnrolmentsProvider);
+        ref.invalidate(unifiedCustomerPaymentsProvider);
       }
     } catch (e) {
       if (mounted) {
@@ -687,62 +695,158 @@ class _BuyGoldScreenState extends ConsumerState<BuyGoldScreen> {
                 ),
               ],
 
-              // Payment Initiation Outcome (Handles HTTP 501 PaymentProviderNotConfigured safely)
+              // Payment Initiation Outcome
               if (_paymentInitiationResult != null) ...[
                 const SizedBox(height: 18),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.gold, width: 1.4),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.storefront_outlined,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _paymentInitiationResult!.isConfigured
-                                  ? 'Payment Initiated'
-                                  : 'Online Payment Gateway Not Configured',
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 15.5,
-                                fontWeight: FontWeight.bold,
+                if (_paymentInitiationResult!.isSuccess)
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.primary, width: 1.5),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.primary,
+                              size: 26,
+                            ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                'Payment Confirmed!',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.gold,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                'DEMO MODE',
+                                style: TextStyle(
+                                  color: AppColors.dark,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _paymentInitiationResult!.message ??
+                              'Your contribution has been successfully processed and credited.',
+                          style: TextStyle(
+                            color: AppColors.dark.withValues(alpha: 0.85),
+                            fontSize: 13.5,
+                            height: 1.4,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _paymentInitiationResult!.message ??
-                            'Online payment gateway integration is deferred. Your balance has not been modified. Please visit your Saranga Jewels branch to record an in-store cash contribution.',
-                        style: TextStyle(
-                          color: AppColors.dark.withValues(alpha: 0.85),
-                          fontSize: 13.5,
-                          height: 1.45,
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      SJewlsInfoRow(
-                        label: 'Quoted Payable Amount',
-                        value: Formatters.currency(
-                          _paymentInitiationResult!.amountToPay,
-                          currencyCode: _paymentInitiationResult!.currency,
+                        const SizedBox(height: 12),
+                        SJewlsInfoRow(
+                          label: 'Amount Paid',
+                          value: Formatters.currency(
+                            _paymentInitiationResult!.amountToPay,
+                            currencyCode: _paymentInitiationResult!.currency,
+                          ),
+                          emphasizeValue: true,
                         ),
-                        emphasizeValue: true,
-                      ),
-                    ],
+                        if (_paymentInitiationResult!.goldGramsCredited > 0)
+                          SJewlsInfoRow(
+                            label: 'Gold Credited',
+                            value:
+                                '+${Formatters.grams(_paymentInitiationResult!.goldGramsCredited)}',
+                            emphasizeValue: true,
+                            goldValue: true,
+                          ),
+                        if (_paymentInitiationResult!.transactionId != null)
+                          SJewlsInfoRow(
+                            label: 'Transaction ID',
+                            value: _paymentInitiationResult!.transactionId!,
+                          ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                          label: const Text('Back to Enrolment Details'),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.gold, width: 1.4),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.storefront_outlined,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _paymentInitiationResult!.isConfigured
+                                    ? 'Payment Initiated'
+                                    : 'Online Payment Gateway Not Configured',
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _paymentInitiationResult!.message ??
+                              'Online payment gateway integration is deferred. Your balance has not been modified. Please visit your Saranga Jewels branch to record an in-store cash contribution.',
+                          style: TextStyle(
+                            color: AppColors.dark.withValues(alpha: 0.85),
+                            fontSize: 13.5,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SJewlsInfoRow(
+                          label: 'Quoted Payable Amount',
+                          value: Formatters.currency(
+                            _paymentInitiationResult!.amountToPay,
+                            currencyCode: _paymentInitiationResult!.currency,
+                          ),
+                          emphasizeValue: true,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
               const SizedBox(height: 24),
             ],

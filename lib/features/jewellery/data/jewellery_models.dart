@@ -474,6 +474,10 @@ class PaymentInitiationResponse {
   final String currency;
   final bool isConfigured;
   final int httpStatusCode;
+  final bool isSuccess;
+  final double goldGramsCredited;
+  final String? transactionId;
+  final String? paidAtUtc;
 
   const PaymentInitiationResponse({
     this.code,
@@ -483,11 +487,18 @@ class PaymentInitiationResponse {
     required this.currency,
     required this.isConfigured,
     required this.httpStatusCode,
+    this.isSuccess = false,
+    this.goldGramsCredited = 0.0,
+    this.transactionId,
+    this.paidAtUtc,
   });
 
   factory PaymentInitiationResponse.fromJson(
     Map<String, dynamic> json, {
     int httpStatusCode = 501,
+    bool isSuccess = false,
+    double goldGramsCredited = 0.0,
+    String? transactionId,
   }) {
     return PaymentInitiationResponse(
       code: json['code'] as String?,
@@ -497,6 +508,11 @@ class PaymentInitiationResponse {
       currency: (json['currency'] as String?) ?? 'LKR',
       isConfigured: json['isConfigured'] == true,
       httpStatusCode: httpStatusCode,
+      isSuccess: isSuccess || (json['isSuccess'] == true),
+      goldGramsCredited:
+          (json['goldGramsCredited'] as num?)?.toDouble() ?? goldGramsCredited,
+      transactionId: (json['transactionId'] ?? transactionId)?.toString(),
+      paidAtUtc: json['paidAtUtc']?.toString(),
     );
   }
 }

@@ -128,6 +128,7 @@ class _ChituPaymentScreenState extends ConsumerState<ChituPaymentScreen> {
       final result = await repo.confirmSlotPayment(
         planId: widget.planId,
         slotSelections: selections,
+        planName: _preview?.planName,
         previewReference: _preview?.previewReference,
         expectedTotalAmount: _preview?.totalPayableAmount,
       );

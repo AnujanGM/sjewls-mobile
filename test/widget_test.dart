@@ -802,5 +802,88 @@ void main() {
         expect(overrideDto.rateSource, 'Store Override');
       },
     );
+
+    test('PaymentInitiationResponse parses demo payment success fields', () {
+      final successResponse = PaymentInitiationResponse(
+        quoteId: 'quote-123',
+        amountToPay: 25000.0,
+        currency: 'LKR',
+        isConfigured: true,
+        isSuccess: true,
+        goldGramsCredited: 0.6057,
+        transactionId: 'TXN-DEMO-001',
+        httpStatusCode: 200,
+        message: 'Payment confirmed! 0.6057 g credited to enrolment.',
+      );
+
+      expect(successResponse.isSuccess, isTrue);
+      expect(successResponse.goldGramsCredited, 0.6057);
+      expect(successResponse.transactionId, 'TXN-DEMO-001');
+      expect(successResponse.amountToPay, 25000.0);
+      expect(successResponse.currency, 'LKR');
+    });
+
+    test(
+      'CustomerChituJoinResponse and CustomerChituPaymentConfirmResponse handle simulated demo results',
+      () {
+        final joinResponse = CustomerChituJoinResponse(
+          paymentId: 'PAY-JOIN-001',
+          planId: 'plan-1',
+          planName: 'Diwali Gold Savings Chittu',
+          slotsCount: 2,
+          totalAmountPaid: 10000.0,
+          currency: 'LKR',
+          isSimulated: true,
+          isGatewayDeferred: false,
+          assignedSlots: [
+            CustomerAssignedSlotDto(
+              slotId: 'slot-1',
+              slotNumber: 1,
+              slotDisplayCode: 'SLT-001',
+              initialMonthsPaid: 1,
+              activatedAtUtc: '2026-11-17T05:00:00Z',
+            ),
+            CustomerAssignedSlotDto(
+              slotId: 'slot-2',
+              slotNumber: 2,
+              slotDisplayCode: 'SLT-002',
+              initialMonthsPaid: 1,
+              activatedAtUtc: '2026-11-17T05:00:00Z',
+            ),
+          ],
+        );
+
+        expect(joinResponse.isGatewayDeferred, isFalse);
+        expect(joinResponse.isSimulated, isTrue);
+        expect(joinResponse.slotsCount, 2);
+        expect(joinResponse.assignedSlots.length, 2);
+        expect(joinResponse.assignedSlots.first.slotDisplayCode, 'SLT-001');
+
+        final paymentConfirmResponse = CustomerChituPaymentConfirmResponse(
+          paymentId: 'PAY-INST-001',
+          planId: 'plan-1',
+          planName: 'Diwali Gold Savings Chittu',
+          totalAmount: 5000.0,
+          currency: 'LKR',
+          paidAtUtc: '2026-11-17T05:00:00Z',
+          isSimulated: true,
+          isGatewayDeferred: false,
+          receipts: [
+            CustomerSlotPaymentReceiptDto(
+              slotId: 'slot-1',
+              slotDisplayCode: 'SLT-001',
+              amountAllocated: 5000.0,
+              monthsCovered: 1,
+              clearedMonthIndices: [2],
+            ),
+          ],
+        );
+
+        expect(paymentConfirmResponse.isGatewayDeferred, isFalse);
+        expect(paymentConfirmResponse.isSimulated, isTrue);
+        expect(paymentConfirmResponse.receipts.length, 1);
+        expect(paymentConfirmResponse.receipts.first.amountAllocated, 5000.0);
+      },
+    );
   });
 }

@@ -630,6 +630,7 @@ class _ChituJoinBottomSheetState extends ConsumerState<_ChituJoinBottomSheet> {
       final result = await repo.confirmJoin(
         planId: widget.plan.planId,
         quantity: _quantity,
+        planName: widget.plan.name,
         previewReference: _preview?.previewReference,
         expectedTotalInitialAmount: _preview?.totalInitialAmountPayable,
       );
